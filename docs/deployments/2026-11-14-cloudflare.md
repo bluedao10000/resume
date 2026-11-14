@@ -315,3 +315,17 @@ TypeScript、受影响文件格式检查、4 项模板浏览器回归及生产�
 - 生产 `/api/events`：合法事件 204，非法事件 400；已发送一次 `landing_example_click`（source=`deploy_probe`）探针。当前部署凭据没有 Account Analytics Read 权限，未用 SQL API 复核写入；需用具备该权限的 token 按运维文档查询，或查看控制台 dataset 是否出现数据点。
 - `/api/config` 仍为 live / pi-durable。未重新执行 Google OAuth 授权或真实模型调用；未验证搜索引擎收录、排名或 AI 引用。
 - 本地验证后开发服务已停止，5173 端口已释放。
+
+## 同日发布：已登录跳过落地页
+
+发布版本：`ab134899-c27b-423a-bb63-a80863679e65`，产品代码提交：`aed4ffe`。继续使用 live / pi-durable，无数据库迁移、模型调用或计费变更。
+
+`/` 路由 loader 在 SSR 阶段调用 `createServerFn`，用请求 cookie 经 Better Auth 解析会话。已登录访客直接渲染工作台入口，配置请求未完成时显示中性加载态，不再闪现落地页；`useSession` 只负责水合后的登录/退出切换。会话解析失败（未配置认证、本地 D1 未迁移）按未登录处理，公开页照常输出。
+
+验证：
+
+- TypeScript、Prettier、53 项领域/服务端测试、全量 58 项浏览器回归与生产构建通过；真实模型 opt-in 未运行。
+- 本地 SSR 复验无 cookie 请求返回完整落地页与主按钮；E2E 登录场景仍使用客户端会话 mock，验证的是不回归，不代表真实 OAuth 会话。
+- 生产部署成功（上传 15.81s，触发器 2.34s）。首页 HTTP 200，含“开始定制简历”和匿名统计说明；`/api/events` 合法事件 204；`/api/config` 为 live；robots.txt、llms.txt 均 200。
+- 部署环境没有可用的真实登录 cookie，未对生产验证“已登录 SSR 直接进入工作台”分支；需用真实账户访问 `/` 确认不再闪现营销页。
+- 本地开发服务已停止，5173 端口已释放。
