@@ -300,3 +300,18 @@ TypeScript、受影响文件格式检查、4 项模板浏览器回归及生产�
 - 生产 `/api/config` 为 live / pi-durable、authConfigured=true，匿名会话为 null。静态示例点击可到达，登录按钮可用，公开页 localStorage 为空，控制台无警告或错误；没有重新执行完整 Google OAuth 或真实 AI 调用。
 - 独立 curl 首页请求 HTTP 200；Python urllib 默认客户端请求遇 HTTP 403，未将该客户端检查计为通过。不代表所有爬虫已获准访问，也未验证搜索引擎收录、排名或 AI 引用。
 - 本地验证后开发与预览服务已停止，5173 和 4173 端口已释放。
+
+## 同日发布：转换埋点与首屏 CTA
+
+发布版本：`ccf40614-a234-4c2f-b7b0-32845c28dd09`，部署至 https://r.story2u.xyz/，继续使用 live / pi-durable。产品代码提交：`3bb0148`。本次无数据库迁移、模型调用或计费参数变更。
+
+未登录首页主按钮改为服务端始终输出“开始定制简历”，仅在配置就绪前禁用，爬虫与无 JS 客户端不再只看到加载占位。新增 Cloudflare Analytics Engine binding（dataset `folio_events`，`.env` 由 `CLOUDFLARE_ANALYTICS_DATASET` 控制）与 `POST /api/events`，记录 `landing_view`、登录/试用/查看示例点击及可选 UTM 来源；只写事件名与来源，不含简历、账户、IP 或设备标识。
+
+验证：
+
+- 首次部署因账号未启用 Analytics Engine 失败（code 10089），未上传版本；控制台启用后重试成功。secrets 白名单同步成功，Worker 上传 22.37s，触发器 4.88s。
+- 生产首页 HTTP 200，SSR HTML 含“开始定制简历”和匿名统计说明；发布后首个未带查询串的请求短暂返回旧 HTML，缓存击穿请求与随后三次普通请求均返回新版本，`/` 最终稳定为新正文。
+- `robots.txt`、`sitemap.xml`、`llms.txt`、`og.png` 均 HTTP 200；JSON-LD 含 WebSite、SoftwareApplication、Offer、FAQPage（8 组问答），可解析。
+- 生产 `/api/events`：合法事件 204，非法事件 400；已发送一次 `landing_example_click`（source=`deploy_probe`）探针。当前部署凭据没有 Account Analytics Read 权限，未用 SQL API 复核写入；需用具备该权限的 token 按运维文档查询，或查看控制台 dataset 是否出现数据点。
+- `/api/config` 仍为 live / pi-durable。未重新执行 Google OAuth 授权或真实模型调用；未验证搜索引擎收录、排名或 AI 引用。
+- 本地验证后开发服务已停止，5173 端口已释放。
