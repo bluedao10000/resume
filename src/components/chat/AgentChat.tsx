@@ -11,7 +11,6 @@ import {
 } from '@assistant-ui/react'
 import {
   ArrowUp,
-  ArrowRight,
   Check,
   FileText,
   Plus,
@@ -29,6 +28,7 @@ import {
 } from '../../domain/resume'
 import type { z } from 'zod'
 import { htmlToMarkdown } from '../../lib/html-to-markdown'
+import { ChatWelcome } from './ChatWelcome'
 import {
   boundedHistory,
   type ChatThread,
@@ -57,6 +57,7 @@ type Props = {
 export function AgentChat(props: Props) {
   const [toolsOpen, setToolsOpen] = useState(false)
   const [pasteError, setPasteError] = useState('')
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const needsImport = !props.library.some((resume) => !isExampleResume(resume))
   const current = useRef(props)
   current.current = props
@@ -244,6 +245,21 @@ export function AgentChat(props: Props) {
     <AssistantRuntimeProvider runtime={runtime}>
       <ThreadPrimitive.Root className="chat-root">
         <ThreadPrimitive.Viewport className="chat-scroll">
+          <AuiIf condition={(s) => s.thread.isEmpty && !s.thread.isRunning}>
+            <ChatWelcome
+              needsImport={needsImport}
+              hasResume={props.hasResume}
+              onImport={props.onImport}
+              onJD={props.onJD}
+              onEdit={() => {
+                if (!runtime.thread.composer.getState().text.trim())
+                  runtime.thread.composer.setText(
+                    '帮我精简个人简介，保留真实经历和核心优势。',
+                  )
+                inputRef.current?.focus()
+              }}
+            />
+          </AuiIf>
           <ThreadPrimitive.Messages
             components={{ UserMessage, AssistantMessage }}
           />
@@ -276,24 +292,9 @@ export function AgentChat(props: Props) {
         </ThreadPrimitive.Viewport>
         <div className="composer-container">
           {pasteError ? <p role="alert">{pasteError}</p> : null}
-          {needsImport ? (
-            <AuiIf condition={(s) => s.thread.isEmpty && !s.thread.isRunning}>
-              <button
-                type="button"
-                className="import-prompt"
-                onClick={props.onImport}
-              >
-                <FileText size={17} aria-hidden="true" />
-                <span>
-                  <strong>导入简历</strong>
-                  <span>粘贴原文或导入 PDF、Word</span>
-                </span>
-                <ArrowRight size={16} aria-hidden="true" />
-              </button>
-            </AuiIf>
-          ) : null}
           <ComposerPrimitive.Root className="composer">
             <ComposerPrimitive.Input
+              ref={inputRef}
               aria-label="发送给 Folio"
               placeholder={
                 props.intent === 'tailor'

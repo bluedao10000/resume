@@ -3,9 +3,11 @@ import { AgentRequestSchema, demoAgent } from '../src/domain/resume'
 
 async function openWorkspace(page: Page) {
   await page.goto('/')
-  await expect(page.locator('.landing-page, .app-shell').first()).toBeVisible()
-  if (await page.locator('.landing-page').isVisible())
-    await page.getByRole('button', { name: '试用示例' }).click()
+  const demo = page.getByRole('button', { name: '试用示例' })
+  await expect(
+    page.locator('.app-shell[data-ready="true"]').or(demo),
+  ).toBeVisible()
+  if (await demo.isVisible()) await demo.click()
   await expect(page.locator('.app-shell')).toHaveAttribute('data-ready', 'true')
 }
 
@@ -312,7 +314,7 @@ test('对话独享全屏高度，长消息独立滚动，工具菜单不挤占�
   })
   await page.setViewportSize({ width: 1440, height: 900 })
   await openWorkspace(page)
-  await expect(page.locator('.chat-scroll')).toBeEmpty()
+  await expect(page.getByRole('region', { name: '简历使用引导' })).toBeVisible()
   await expect(page.locator('.import-prompt')).toBeVisible()
   const initialHeight = await page
     .locator('.chat-scroll')
