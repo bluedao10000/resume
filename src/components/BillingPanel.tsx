@@ -10,6 +10,16 @@ const publicPlans = z.array(
     credits: z.number(),
   }),
 )
+const checkoutResult = z.object({
+  order: z
+    .object({
+      plan: z.enum(['plus', 'pro']),
+      totalFen: z.number().int().positive(),
+      expiresAt: z.number(),
+      qr: z.string().startsWith('data:image/png;base64,').nullable(),
+    })
+    .nullable(),
+})
 const credits = (units: number) =>
   new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(
     units / 1000000,
@@ -17,25 +27,33 @@ const credits = (units: number) =>
 const count = (value: number) => new Intl.NumberFormat('en-US').format(value)
 export function BillingPanel({
   signedIn,
+  market,
   onLogin,
 }: {
   signedIn: boolean
+  market: 'cn' | 'global'
   onLogin: () => void
 }) {
+  const china = market === 'cn'
+  const [order, setOrder] =
+    useState<z.infer<typeof checkoutResult>['order']>(null)
   const [summary, setSummary] = useState<BillingSummary | null>(null)
   const [catalog, setCatalog] = useState<z.infer<typeof publicPlans>>([])
   const [loading, setLoading] = useState(true)
   const [pending, setPending] = useState('')
   const [error, setError] = useState('')
+  const [orderNotice, setOrderNotice] = useState('')
   const load = useCallback(
     async (signal?: AbortSignal) => {
       setLoading(true)
       setError('')
       try {
-        const response = await fetch(
-          signedIn ? '/api/billing/' : '/api/config',
-          { signal },
-        )
+        const [response, checkout] = await Promise.all([
+          fetch(signedIn ? '/api/billing/' : '/api/config', { signal }),
+          china && signedIn ? fetch('/api/billing/checkout', { signal }) : null,
+        ])
+        if (checkout?.ok)
+          setOrder(checkoutResult.parse(await checkout.json()).order)
         const data = await response.json()
         if (!response.ok)
           throw new Error(
@@ -57,7 +75,7 @@ export function BillingPanel({
         if (!signal?.aborted) setLoading(false)
       }
     },
-    [signedIn],
+    [signedIn, china],
   )
   useEffect(() => {
     const controller = new AbortController()
@@ -65,6 +83,7 @@ export function BillingPanel({
     return () => controller.abort()
   }, [load])
   async function action(path: string, plan?: string, method = 'POST') {
+    setOrderNotice('')
     setPending(plan ?? path)
     setError('')
     try {
@@ -72,6 +91,7 @@ export function BillingPanel({
         method,
         headers: { 'Content-Type': 'application/json' },
         ...(plan && { body: JSON.stringify({ plan }) }),
+        ...(china && !plan && { body: JSON.stringify({ check: true }) }),
       })
       const value = await response.json()
       if (!response.ok)
@@ -79,6 +99,16 @@ export function BillingPanel({
           z.object({ error: z.string().optional() }).parse(value).error ??
             '支付请求失败',
         )
+      if (china) {
+        const result = checkoutResult.parse(value)
+        setOrder(result.order)
+        if (!result.order) {
+          await load()
+        } else if (!plan) {
+          setOrderNotice('暂未确认付款。若已支付，请稍后再查。')
+        }
+        return
+      }
       if (method === 'DELETE') {
         await load()
         return
@@ -132,9 +162,9 @@ export function BillingPanel({
             <span>可用 {credits(summary.remaining)} credits</span>
             <span>
               {new Date(summary.periodEnd).toLocaleDateString('zh-CN', {
-                timeZone: 'UTC',
+                timeZone: china ? 'Asia/Shanghai' : 'UTC',
               })}{' '}
-              重置
+              {china && summary.plan !== 'free' ? '到期' : '重置'}
             </span>
           </div>
           {summary.reserved > 0 ? (
@@ -148,6 +178,53 @@ export function BillingPanel({
       ) : (
         <p className="field-hint">演示不消耗额度。登录后使用 Free 套餐。</p>
       )}
+      {china && order ? (
+        <section className="billing-usage" aria-label="待完成的微信支付">
+          <strong>
+            {order.plan === 'plus' ? 'Plus' : 'Pro'} · ¥{order.totalFen / 100} /
+            30 天
+          </strong>
+          {order.qr ? (
+            <>
+              <p>请用微信扫一扫。支付后点击「查询支付结果」。</p>
+              <img
+                src={order.qr}
+                alt="微信支付二维码"
+                width={224}
+                height={224}
+                style={{ maxWidth: '100%', height: 'auto' }}
+              />
+              <p>
+                支付截止{' '}
+                {new Date(order.expiresAt).toLocaleString('zh-CN', {
+                  timeZone: 'Asia/Shanghai',
+                })}
+              </p>
+            </>
+          ) : (
+            <p>二维码暂不可用，请查询订单状态。</p>
+          )}
+          <button
+            type="button"
+            className="billing-button"
+            disabled={!!pending}
+            onClick={() => void action('/api/billing/checkout')}
+          >
+            查询支付结果
+          </button>
+          {orderNotice ? <p role="status">{orderNotice}</p> : null}
+          {!order.qr && order.expiresAt > Date.now() + 60000 ? (
+            <button
+              type="button"
+              className="billing-link"
+              disabled={!!pending}
+              onClick={() => void action('/api/billing/checkout', order.plan)}
+            >
+              继续微信支付
+            </button>
+          ) : null}
+        </section>
+      ) : null}
       <div className="billing-plans">
         {catalog.map((plan) => (
           <section
@@ -157,11 +234,22 @@ export function BillingPanel({
           >
             <h3>{plan.name}</h3>
             <p className="billing-price">
-              ${plan.monthlyCents / 100}
-              <span>/月</span>
+              {china ? '¥' : '$'}
+              {plan.monthlyCents / 100}
+              <span>{china && plan.id !== 'free' ? '/30 天' : '/月'}</span>
             </p>
-            <p>{plan.credits} credits / 月</p>
-            {summary?.plan === plan.id ? (
+            <p>
+              {plan.credits} credits{' '}
+              {china && plan.id !== 'free' ? '/ 30 天' : '/ 月'}
+            </p>
+            {china &&
+            summary?.plan !== 'free' &&
+            summary &&
+            plan.id !== 'free' ? (
+              <span className="billing-current">
+                {summary.plan === plan.id ? '当前套餐' : '到期后可购买'}
+              </span>
+            ) : summary?.plan === plan.id ? (
               <span className="billing-current">当前套餐</span>
             ) : plan.id === 'free' ? (
               <span className="billing-current">免费使用</span>
@@ -170,7 +258,9 @@ export function BillingPanel({
                 type="button"
                 className="billing-button"
                 disabled={
-                  !!pending || (!!summary && !summary.paymentConfigured)
+                  !!pending ||
+                  (!!summary && !summary.paymentConfigured) ||
+                  (china && !!order)
                 }
                 onClick={() =>
                   !signedIn
@@ -184,17 +274,25 @@ export function BillingPanel({
                 }
               >
                 {pending === plan.id
-                  ? '正在前往…'
+                  ? '正在处理…'
                   : !signedIn
                     ? '登录后选择'
                     : summary?.plan !== 'free'
                       ? '管理订阅'
-                      : `升级到 ${plan.name}`}
+                      : china
+                        ? `微信支付购买 ${plan.name}`
+                        : `升级到 ${plan.name}`}
               </button>
             )}
           </section>
         ))}
       </div>
+      {china ? (
+        <p className="field-hint">
+          付费套餐一次购买，有效期 30 天，到期回到
+          Free。请使用另一台设备显示支付二维码。
+        </p>
+      ) : null}
       {summary && !summary.paymentConfigured ? (
         <p className="field-hint">在线支付尚未开通，当前可使用 Free 套餐。</p>
       ) : null}
@@ -247,7 +345,7 @@ export function BillingPanel({
           <button type="button" onClick={() => void load()}>
             重新读取
           </button>
-          {summary?.paymentConfigured ? (
+          {!china && summary?.paymentConfigured ? (
             <button
               type="button"
               disabled={!!pending}

@@ -155,6 +155,7 @@ const ConfigSchema = z.object({
   mode: z.enum(['demo', 'live']),
   runtime: z.enum(['pi-ai', 'pi-durable']).default('pi-ai'),
   authConfigured: z.boolean(),
+  market: z.enum(['cn', 'global']).default('global'),
   importLimits: ImportLimitsSchema.optional(),
 })
 type Config = z.infer<typeof ConfigSchema>
@@ -172,6 +173,8 @@ function Entry() {
   const [loginBusy, setLoginBusy] = useState(false)
   const [loginError, setLoginError] = useState('')
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('loginFailed'))
+      setLoginError('微信登录未完成，请重试。')
     const controller = new AbortController()
     fetch('/api/config', { signal: controller.signal })
       .then((response) => {
@@ -194,7 +197,8 @@ function Entry() {
     setLoginError('')
     try {
       const response = await authClient.signIn.social({
-        provider: 'google',
+        provider: config?.market === 'cn' ? 'wechat' : 'google',
+        ...(config?.market === 'cn' && { errorCallbackURL: '/?loginFailed=1' }),
         callbackURL: '/',
       })
       if (response.error)
@@ -250,6 +254,7 @@ function Entry() {
     return (
       <LandingPage
         ready
+        loginProvider={config.market === 'cn' ? '微信' : 'Google'}
         canLogin={config.authConfigured}
         isLoading={loginBusy}
         error={loginError}
@@ -1302,8 +1307,12 @@ function Workspace({
           {session ? (
             <dl className="account-details">
               <div>
-                <dt>邮箱</dt>
-                <dd>{session.user.email}</dd>
+                <dt>{config.market === 'cn' ? '微信账户' : '邮箱'}</dt>
+                <dd>
+                  {config.market === 'cn'
+                    ? session.user.name
+                    : session.user.email}
+                </dd>
               </div>
               <div>
                 <dt>存储</dt>
@@ -1334,15 +1343,21 @@ function Workspace({
             <Button
               label={
                 config.authConfigured
-                  ? '使用 Google 继续'
-                  : 'Google OAuth 待配置'
+                  ? config.market === 'cn'
+                    ? '使用微信继续'
+                    : '使用 Google 继续'
+                  : '登录尚未配置'
               }
               width="100%"
               variant="primary"
               isDisabled={!config.authConfigured}
               isLoading={loginBusy}
               onClick={() => void onLogin()}
-              icon={<span className="google-icon">G</span>}
+              icon={
+                config.market === 'global' ? (
+                  <span className="google-icon">G</span>
+                ) : undefined
+              }
             />
           )}
           {loginError ? <p role="alert">{loginError}</p> : null}
@@ -1352,6 +1367,7 @@ function Workspace({
         <Modal title="套餐与用量" onClose={() => setModal(null)}>
           <BillingPanel
             signedIn={!!session}
+            market={config.market}
             onLogin={() => {
               setModal('login')
             }}

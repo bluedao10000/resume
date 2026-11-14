@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
-import { configure, secretKeys } from './configure.mjs'
+import { configure, runtimeSecretKeys } from './configure.mjs'
 
 const config = configure()
 const action = process.argv[2]
@@ -33,7 +33,7 @@ if (action === 'deploy') {
   fs.rmSync('dist/server/.dev.vars', { force: true })
   // Synchronize only explicitly permitted runtime secrets, never CF credentials.
   const secrets = Object.fromEntries(
-    secretKeys.filter((key) => config[key]).map((key) => [key, config[key]]),
+    runtimeSecretKeys(config).map((key) => [key, config[key]]),
   )
   wrangler(
     ['secret', 'bulk', '--config', 'dist/server/wrangler.json'],

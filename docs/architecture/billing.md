@@ -60,3 +60,9 @@ Webhook 接受 invoice.paid、invoice.payment_failed、customer.subscription.upd
 - <https://docs.stripe.com/webhooks>：原始正文验签、重试和事件处理。
 - <https://docs.stripe.com/changelog/basil/2025-03-31/deprecate-subscription-current-period-start-and-end>：周期字段移至 subscription item。
 - <https://docs.stripe.com/api/subscriptions/object>：latest_invoice 可展开为当前账单对象。
+
+## 国内市场支付
+
+`APP_MARKET=cn` 使用独立的 `billing_wechat_orders`，共用原有用量账本与原子预留。用户会话和同源校验覆盖下单及主动查单。D1 部分唯一索引限制每账户一个待支付订单。重试复用原订单参数，付费期内暂停新购。过期订单先查询再关闭，未确认的状态保留以便重试。
+
+回调和查单结果使用微信支付公钥验签，回调验签后用 APIv3 密钥解密。核对支付状态、类型、币种、金额、AppID、商户号及本地订单号后，单条条件更新结算。交易号唯一，重复通知沿用首次结算周期。订单直接提供该账户从微信确认成功时间起 30 天的权益。

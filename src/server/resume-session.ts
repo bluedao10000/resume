@@ -1,3 +1,4 @@
+import { runtimeConfig } from '../config/runtime-defaults.mjs'
 import { DurableObject } from 'cloudflare:workers'
 import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context'
 import { openDurableObjectSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/cloudflare'
@@ -25,7 +26,7 @@ export class ResumeAgentSession extends DurableObject {
   private maintenance: Promise<void> = Promise.resolve()
   constructor(ctx: DurableObjectState, env: Record<string, string>) {
     super(ctx, env)
-    this.ledger = env as unknown as BillingEnv
+    this.ledger = runtimeConfig(env) as unknown as BillingEnv
     void ctx.blockConcurrencyWhile(async () => {
       await ctx.storage.setAlarm(Date.now() + 60000)
       const storage = await openDurableObjectSqliteStorage(ctx.storage)

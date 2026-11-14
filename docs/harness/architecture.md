@@ -110,3 +110,5 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 ## 计费边界
 
 `domain/billing.ts` 定义整数费率与用量，`server/billing.ts` 管理 D1 原子预留与结算；pi adapter fetch 边界执行预算检查，durable DO 从持久化 transcript 结算。Stripe 独立维护订阅权益，不访问简历组件。完整流程见 [计费架构与恢复](../architecture/billing.md)。
+
+国内版通过 `APP_MARKET=cn` 选择 Better Auth 微信网站登录和微信支付 APIv3。D1 通过支付订单提供有效期内的付费权益，两个 Agent runtime 共用原有用量账本。[国内版微信开通](operations.md#国内版微信开通)

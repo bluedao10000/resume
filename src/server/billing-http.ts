@@ -1,3 +1,4 @@
+import { runtimeConfig } from '../config/runtime-defaults.mjs'
 import { env } from 'cloudflare:workers'
 import { getAuth } from './auth'
 import { BillingError, type BillingEnv } from './billing'
@@ -10,7 +11,7 @@ export async function billingHandler(
   ) => Promise<unknown>,
 ) {
   try {
-    const config = env as unknown as BillingEnv
+    const config = runtimeConfig(env) as unknown as BillingEnv
     if (
       request.method !== 'GET' &&
       request.headers.get('origin') !== new URL(config.BETTER_AUTH_URL).origin

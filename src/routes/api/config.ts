@@ -1,11 +1,13 @@
+import { runtimeConfig } from '../../config/runtime-defaults.mjs'
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
+import { authConfigured } from '../../server/auth'
 import { plans } from '../../server/billing'
 export const Route = createFileRoute('/api/config')({
   server: {
     handlers: {
       GET: () => {
-        const config = env as unknown as Record<string, string>
+        const config = runtimeConfig(env) as unknown as Record<string, string>
         return Response.json({
           mode: config.APP_MODE === 'live' ? 'live' : 'demo',
           importLimits: {
@@ -18,11 +20,8 @@ export const Route = createFileRoute('/api/config')({
           billingPlans: plans(config),
           runtime:
             config.AGENT_RUNTIME === 'pi-durable' ? 'pi-durable' : 'pi-ai',
-          authConfigured: Boolean(
-            config.BETTER_AUTH_SECRET &&
-            config.GOOGLE_CLIENT_ID &&
-            config.GOOGLE_CLIENT_SECRET,
-          ),
+          market: config.APP_MARKET === 'cn' ? 'cn' : 'global',
+          authConfigured: authConfigured(config),
         })
       },
     },

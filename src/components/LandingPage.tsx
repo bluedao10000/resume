@@ -79,6 +79,7 @@ const tailoredExample = {
 export function LandingPage({
   ready,
   canLogin,
+  loginProvider = 'Google',
   isLoading,
   error,
   onLogin,
@@ -86,6 +87,7 @@ export function LandingPage({
 }: {
   ready: boolean
   canLogin: boolean
+  loginProvider?: string
   isLoading: boolean
   error: string
   onLogin: () => void
@@ -166,7 +168,7 @@ export function LandingPage({
           </div>
           {ready && canLogin ? (
             <p className="landing-note" id="landing-login-note">
-              使用 Google 登录。提供免费 AI 额度，按实际用量消耗。
+              使用{loginProvider}登录。提供免费 AI 额度，按实际用量消耗。
             </p>
           ) : null}
           {error ? (

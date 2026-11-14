@@ -206,3 +206,40 @@ npm run deploy
 - D1 新增计费与 pi-ai 最终结果缓存，其中可能含简历输出；完整简历库和 UI 历史仍是本机数据。DO 保留任务 transcript。清理本机站点不会清理这些服务端记录。账户删除和隐私导出尚待统一实现。
 - 配额变更影响当前按配置计算的 allowance；费率快照不追溯修改已有 run。生产调整须评估在途预留和用户权益，不随意改低正在使用的额度。账本记录暂未自动过期。
 - 退款与拒付尚未自动撤销权益，必须由运营核对并处理；启用真实支付前配置税务、账单支持与退款政策。
+
+## 国内版微信开通
+
+`cn` 分支的示例配置默认使用 `APP_MARKET=cn`，可先以 `APP_MODE=demo` 运行。已有 `.env` 需手动选择市场。正式开通请为国内站配置独立的 Worker、D1、HTTPS 域名及模型，设置 `APP_MODE=live` 并确认模型费率。
+
+1. 在[微信开放平台](https://open.weixin.qq.com/)申请网站应用和微信登录权限，并配置授权回调域。填写 `WECHAT_APP_ID` 和 `WECHAT_APP_SECRET`。回调地址为 `https://<站点>/api/auth/callback/wechat`。
+2. 在微信支付商户平台开通直连商户 Native 支付并绑定收款 AppID。填写 `WECHAT_PAY_APP_ID`、`WECHAT_PAY_MCH_ID`、`WECHAT_PAY_MERCHANT_SERIAL`（商户 API 证书序列号）、`WECHAT_PAY_PRIVATE_KEY`（PKCS#8 PEM）、`WECHAT_PAY_API_V3_KEY`、`WECHAT_PAY_PUBLIC_KEY_ID` 和 `WECHAT_PAY_PUBLIC_KEY`（SPKI PEM）。PEM 可用 dotenv 双引号包裹多行。支付公钥模式须已在商户侧生效，当前按一个公钥 ID 验签。
+3. 确认 `WECHAT_PAY_PLUS_FEN` 和 `WECHAT_PAY_PRO_FEN`，单位为分。选定部署环境后先应用 D1 迁移，再使用既有脚本构建和发布。商户私钥、APIv3 密钥和微信 AppSecret 由部署脚本同步为 Worker secrets。下单时传入支付回调地址 `https://<站点>/api/billing/webhook`。
+4. 在配置完成的 HTTPS 环境验证同一微信账号多次登录、实际下单、支付回调及主动查单。商户通过商户平台对账，退款及争议需人工处理。
+
+参考[微信支付 Native 开发指引](https://pay.wechatpay.cn/doc/v3/merchant/4012791891)、[支付成功通知](https://pay.wechatpay.cn/doc/v3/merchant/4012791882)及[商户订单号查单](https://pay.wechatpay.cn/doc/v3/merchant/4012791880)。
+
+### codeiy 国内演示部署
+
+2026-11-14 发布到 `codeiy-main-site`。主站为 `https://www.codeiy.com`，根域名
+`https://codeiy.com` 也绑定同一 Worker。通过 `cf-codeiy` 选择 Cloudflare 账号。
+在部署用 `.env` 中填写以下非敏感参数，其余字段以 `.env.example` 为基础。
+重新发布前，使用同一环境的 Better Auth secret。
+
+| 字段 | 值 |
+| --- | --- |
+| `APP_MARKET` | `cn` |
+| `APP_MODE` | `demo` |
+| `CLOUDFLARE_WORKER_NAME` | `codeiy-main-site` |
+| `BETTER_AUTH_URL` | `https://www.codeiy.com` |
+| `CLOUDFLARE_CUSTOM_DOMAIN` | `www.codeiy.com` |
+| `CLOUDFLARE_CUSTOM_DOMAIN_ALIAS` | `codeiy.com` |
+| `CLOUDFLARE_D1_DATABASE_NAME` | `folio-cn` |
+| `CLOUDFLARE_D1_DATABASE_ID` | `23287ed4-8f9a-43d2-88b5-e309a364a94f` |
+| `CLOUDFLARE_ANALYTICS_ENABLED` | `false` |
+
+三条 D1 迁移已应用。版本 `d4aa8adf-615b-4ae4-ad79-26d7fb1a80ea` 的两个域名
+首页、公开配置和访客会话均返回 200。微信登录与付款待应用及商户权限审核后开通。
+
+国内版通用模型、费率和运行限制由 `src/config/runtime-defaults.mjs` 提供。
+`.env` 只需配置环境差异，可显式覆盖默认值。Worker 公共变量只同步非默认配置和当前市场的有效字段。
+国内版默认通过 Responses 接口调用 `deepseek-flash`。启用 `APP_MODE=live` 前需填好微信网站应用 AppID 和 AppSecret。

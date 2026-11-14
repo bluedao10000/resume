@@ -1,3 +1,4 @@
+import { runtimeConfig } from '../../config/runtime-defaults.mjs'
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
 import { AgentRequestSchema, demoAgent } from '../../domain/resume'
@@ -47,7 +48,7 @@ export const Route = createFileRoute('/api/agent')({
       GET: ({ request }) => durableStatus(request),
       DELETE: ({ request }) => durableStatus(request),
       POST: async ({ request }) => {
-        const config = env as unknown as BillingEnv
+        const config = runtimeConfig(env) as unknown as BillingEnv
         if (Number(request.headers.get('content-length') ?? 0) > 100000)
           return Response.json(
             { error: '内容过长，请缩减到 20,000 字以内。' },

@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { BACKGROUND_CONTEXT as context } from '@earendil-works/chord/context'
 import { openNodeSqliteStorage } from '@earendil-works/pi-durable/storage/sqlite/node'
+import { runtimeDefaults } from '../config/runtime-defaults.mjs'
 import { generateResume } from './resume-agent'
 import {
   openResumeHarness,
@@ -15,10 +16,11 @@ import { AgentRequestSchema, sampleResume } from '../domain/resume'
 it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
   'configured provider executes real pi-ai and native pi-durable tools',
   async () => {
-    const config = parseEnv(await readFile('.env', 'utf8')) as Record<
-      string,
-      string
-    >
+    const values = parseEnv(await readFile('.env', 'utf8'))
+    const config = {
+      ...runtimeDefaults(values.APP_MARKET),
+      ...values,
+    } as Record<string, string>
     const input = AgentRequestSchema.parse({
       intent: 'polish',
       text: '把专业技能移动到工作经历上方',
@@ -47,24 +49,6 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
     )
     expect(answer.applied).toBe(false)
     expect(answer.message).toContain('架构')
-    const imported = await generateResume(
-      {
-        ...input,
-        intent: 'import',
-        requestId: crypto.randomUUID(),
-        text: '王明\n前端工程师\nwang@example.com\n使用 **React** 和 **TypeScript** 开发后台页面。请保留技术关键词的加粗格式。',
-      },
-      config,
-    )
-    expect(imported.operation?.tool).toBe('resume.update')
-    expect(imported.resume.name).toBe('王明')
-    expect(imported.resume.email).toBe('wang@example.com')
-    expect(imported.resume.isExample).toBe(false)
-    expect(imported.resume.experience).toEqual([])
-    expect(imported.resume.education).toBe('')
-    expect(
-      [imported.resume.summary, ...imported.resume.skills].join('\n'),
-    ).toMatch(/\*\*(?:React|TypeScript)\*\*/)
     const dir = await mkdtemp(join(tmpdir(), 'folio-live-'))
     const harness = await openResumeHarness(
       await openNodeSqliteStorage(join(dir, 'turn.db')),
@@ -91,6 +75,24 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
       await harness.close(context)
       await rm(dir, { recursive: true, force: true })
     }
+    const imported = await generateResume(
+      {
+        ...input,
+        intent: 'import',
+        requestId: crypto.randomUUID(),
+        text: '王明\n前端工程师\nwang@example.com\n使用 **React** 和 **TypeScript** 开发后台页面。请保留技术关键词的加粗格式。',
+      },
+      config,
+    )
+    expect(imported.operation?.tool).toBe('resume.update')
+    expect(imported.resume.name).toBe('王明')
+    expect(imported.resume.email).toBe('wang@example.com')
+    expect(imported.resume.isExample).toBe(false)
+    expect(imported.resume.experience).toEqual([])
+    expect(imported.resume.education).toBe('')
+    expect(
+      [imported.resume.summary, ...imported.resume.skills].join('\n'),
+    ).toMatch(/\*\*(?:React|TypeScript)\*\*/)
   },
   120000,
 )

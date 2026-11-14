@@ -28,7 +28,11 @@ export function plans(config: Record<string, string>) {
   return (['free', 'plus', 'pro'] as const).map((id) => ({
     id,
     name: id === 'free' ? 'Free' : id === 'plus' ? 'Plus' : 'Pro',
-    monthlyCents: Number(config[`BILLING_${id.toUpperCase()}_MONTHLY_CENTS`]),
+    monthlyCents: Number(
+      config.APP_MARKET === 'cn' && id !== 'free'
+        ? config[`WECHAT_PAY_${id.toUpperCase()}_FEN`]
+        : config[`BILLING_${id.toUpperCase()}_MONTHLY_CENTS`],
+    ),
     credits:
       creditUnits(config[`BILLING_${id.toUpperCase()}_CREDITS`]) / 1000000,
   }))
@@ -46,6 +50,19 @@ export function tariff(config: Record<string, string>): Tariff {
   })
 }
 export function paymentsConfigured(config: Record<string, string>) {
+  if (config.APP_MARKET === 'cn')
+    return [
+      'APP_ID',
+      'MCH_ID',
+      'MERCHANT_SERIAL',
+      'PRIVATE_KEY',
+      'API_V3_KEY',
+      'PUBLIC_KEY_ID',
+      'PUBLIC_KEY',
+      'PLUS_FEN',
+      'PRO_FEN',
+    ].every((key) => Boolean(config[`WECHAT_PAY_${key}`]))
+
   return !!(
     config.STRIPE_SECRET_KEY &&
     config.STRIPE_WEBHOOK_SECRET &&
@@ -59,8 +76,6 @@ type Subscription = {
   period_start: number
   period_end: number
   cancel_at_period_end: number
-  stripe_customer_id: string
-  stripe_subscription_id: string
 }
 export async function billingPeriod(
   env: BillingEnv,
@@ -68,25 +83,31 @@ export async function billingPeriod(
   now = Date.now(),
 ) {
   const sub = await env.DB.prepare(
-    'SELECT * FROM billing_subscriptions WHERE user_id=?',
+    env.APP_MARKET === 'cn'
+      ? `SELECT plan, 'active' AS status, period_start, period_end, 0 AS cancel_at_period_end
+         FROM billing_wechat_orders WHERE user_id=? AND status='paid'
+         AND period_end>? AND period_start<=?
+         ORDER BY period_end DESC LIMIT 1`
+      : 'SELECT * FROM billing_subscriptions WHERE user_id=?',
   )
-    .bind(userId)
+    .bind(userId, ...(env.APP_MARKET === 'cn' ? [now, now] : []))
     .first<Subscription>()
   const active =
     sub &&
     sub.status === 'active' &&
     sub.period_start <= now &&
     sub.period_end > now
-  const date = new Date(now)
+  const offset = env.APP_MARKET === 'cn' ? 8 * 3600000 : 0
+  const date = new Date(now + offset)
   const plan: PlanId = active ? sub.plan : 'free'
   return {
     plan,
     start: active
       ? sub.period_start
-      : Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1),
+      : Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1) - offset,
     end: active
       ? sub.period_end
-      : Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1),
+      : Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1) - offset,
     allowance: creditUnits(env[`BILLING_${plan.toUpperCase()}_CREDITS`]),
     sub,
   }
@@ -112,11 +133,13 @@ export async function billingSummary(env: BillingEnv, userId: string) {
       cacheRead: number
       cacheWrite: number
     }>()
-  const customer = await env.DB.prepare(
-    'SELECT stripe_customer_id FROM billing_customers WHERE user_id=?',
-  )
-    .bind(userId)
-    .first()
+  const customer =
+    env.APP_MARKET !== 'cn' &&
+    (await env.DB.prepare(
+      'SELECT stripe_customer_id FROM billing_customers WHERE user_id=?',
+    )
+      .bind(userId)
+      .first())
   const { used = 0, reserved = 0, ...tokens } = totals!
   return {
     plan: period.plan,

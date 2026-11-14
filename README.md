@@ -13,7 +13,7 @@ npm run db:migrate:local
 npm run dev
 ```
 
-打开 `http://localhost:5173`，在落地页点击“试用示例”。默认演示模式支持聊天、预览、编辑、版本保存、模板切换、PDF 打印与 JSON 导出。生产 live 模式从 Google 登录后进入工作台。
+打开 `http://localhost:5173`，在落地页点击“试用示例”。默认演示模式支持聊天、预览、编辑、版本保存、模板切换、PDF 打印与 JSON 导出。生产 live 模式通过所选市场的登录方式进入工作台。
 
 ```bash
 npm run check        # TypeScript
@@ -21,6 +21,12 @@ npm test             # 领域规则测试
 npm run test:e2e     # 端到端；使用本机 Google Chrome
 npm run build        # Workers SSR + Static Assets 构建
 ```
+
+## 国内版
+
+`cn` 分支的新配置默认采用国内模式。正式环境用微信开放平台网站扫码登录，并通过微信支付 Native 二维码购买人民币套餐。付费套餐按次购买，有效期 30 天。已有海外配置可继续使用 `APP_MARKET=global`。
+
+配置、D1 迁移及真实联调步骤见[国内版微信开通](docs/harness/operations.md#国内版微信开通)。
 
 ## 目录
 

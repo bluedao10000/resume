@@ -1404,3 +1404,27 @@ test('退出账户时不把账户简历写入访客分区', async ({ page }) => 
     ),
   ).toBe('访客原稿')
 })
+
+test('国内落地页使用微信登录并发送微信 OAuth 请求', async ({ page }) => {
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      json: { mode: 'live', market: 'cn', authConfigured: true },
+    }),
+  )
+  await page.route('**/api/auth/sign-in/social', (route) =>
+    route.fulfill({ status: 503, json: { message: '登录暂不可用' } }),
+  )
+  await page.goto('/')
+  await expect(page.locator('.landing-intro')).toContainText('使用微信登录')
+  const request = page.waitForRequest('**/api/auth/sign-in/social')
+  await page
+    .locator('.landing-intro')
+    .getByRole('button', { name: '开始定制简历' })
+    .click()
+  expect((await request).postDataJSON()).toMatchObject({
+    provider: 'wechat',
+    callbackURL: '/',
+    errorCallbackURL: '/?loginFailed=1',
+  })
+  await expect(page.getByRole('alert')).toContainText('登录暂不可用')
+})

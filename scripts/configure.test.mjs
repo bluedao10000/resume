@@ -12,6 +12,7 @@ test('generated configuration excludes credentials and declares allowed secrets'
     AI_API_KEY: 'model-secret-fixture',
     CLOUDFLARE_API_TOKEN: 'cf-secret-fixture',
     GOOGLE_CLIENT_SECRET: 'google-secret-fixture',
+    WECHAT_APP_SECRET: 'wechat-login-secret-fixture',
     STRIPE_SECRET_KEY: 'stripe-secret-fixture',
     STRIPE_WEBHOOK_SECRET: 'webhook-secret-fixture',
   })
@@ -21,13 +22,15 @@ test('generated configuration excludes credentials and declares allowed secrets'
     'AI_API_KEY',
     'BETTER_AUTH_SECRET',
     'GOOGLE_CLIENT_SECRET',
+    'WECHAT_APP_SECRET',
     'CLOUDFLARE_API_TOKEN',
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
   ])
     assert.ok(!serialized.includes(config[key]))
   assert.ok(worker.secrets.required.includes('AI_API_KEY'))
-  assert.ok(worker.secrets.required.includes('STRIPE_SECRET_KEY'))
+  assert.ok(worker.secrets.required.includes('WECHAT_APP_SECRET'))
+  assert.ok(!worker.secrets.required.includes('STRIPE_SECRET_KEY'))
   assert.ok(!worker.secrets.required.includes('CLOUDFLARE_API_TOKEN'))
   assert.equal(worker.main, './src/worker.ts')
   assert.deepEqual(worker.durable_objects.bindings, [
