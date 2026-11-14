@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Markdown } from '@tiptap/markdown'
+import { DOMParser as ProseMirrorParser } from '@tiptap/pm/model'
+import { closeHistory } from '@tiptap/pm/history'
 import {
   Bold,
   Italic,
@@ -10,6 +12,7 @@ import {
   Heading3,
   RemoveFormatting,
 } from 'lucide-react'
+import { clipboardHtml } from '../../lib/clipboard-html'
 import { safeHtml } from '../../lib/html-to-markdown'
 import { markdownItems } from '../../domain/rich-text'
 
@@ -32,6 +35,7 @@ export function RichTextEditor({
   current.current = { onChange, maxLength, maxItems, value }
   const [, setRevision] = useState(0)
   const [error, setError] = useState('')
+  const plainPaste = useRef(false)
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -56,7 +60,46 @@ export function RichTextEditor({
         'aria-multiline': 'true',
         class: 'rich-editor-content resume-richtext',
       },
+      // ProseMirror parses a default slice before invoking handlePaste.
       transformPastedHTML: safeHtml,
+      handleKeyDown: (_view, event) => {
+        plainPaste.current = event.shiftKey
+        return false
+      },
+      handleDOMEvents: {
+        keyup: (_view, event) => {
+          plainPaste.current = event.shiftKey
+          return false
+        },
+        blur: () => {
+          plainPaste.current = false
+          return false
+        },
+      },
+      handlePaste: (view, event) => {
+        if (plainPaste.current) return false
+        const data = event.clipboardData
+        if (!data) return false
+        const text = data.getData('text/plain')
+        const html = data.getData('text/html')
+        if (!html && !text) return false
+        // Let ProseMirror fit the semantic slice into the current selection and
+        // keep its native paste transaction / undo behavior.
+        const container = view.dom.ownerDocument.createElement('div')
+        container.innerHTML = clipboardHtml(html, text)
+        const slice = ProseMirrorParser.fromSchema(
+          view.state.schema,
+        ).parseSlice(container, { context: view.state.selection.$from })
+        if (!slice.content.size) return true
+        view.dispatch(
+          closeHistory(view.state.tr)
+            .replaceSelection(slice)
+            .scrollIntoView()
+            .setMeta('paste', true)
+            .setMeta('uiEvent', 'paste'),
+        )
+        return true
+      },
     },
     onSelectionUpdate: () => setRevision((n) => n + 1),
     onUpdate: ({ editor }) => {

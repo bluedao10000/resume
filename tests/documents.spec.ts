@@ -29,12 +29,8 @@ async function workspace(page: Page) {
 }
 async function paste(target: Locator, html: string) {
   await target.focus()
+  await target.press('ControlOrMeta+a')
   await target.evaluate((element, value) => {
-    const range = document.createRange()
-    range.selectNodeContents(element)
-    const selection = window.getSelection()!
-    selection.removeAllRanges()
-    selection.addRange(range)
     const clipboardData = new DataTransfer()
     clipboardData.setData('text/html', value)
     clipboardData.setData(
@@ -263,4 +259,181 @@ test('连续输入技能和工作要点不重排光标或丢失字符', async ({
   await expect(page.locator('.preview-panel .resume-skills')).toContainText(
     'Distributed systems',
   )
+})
+
+test('PDF 剪贴板的预格式换行、文本项目符号和字体强调保留到工作预览', async ({
+  page,
+}) => {
+  await workspace(page)
+  await page.getByRole('button', { name: '编辑内容' }).click()
+  const editor = page.getByRole('textbox', { name: '工作要点 1', exact: true })
+  await editor.focus()
+  await editor.press('ControlOrMeta+a')
+  await editor.evaluate((element) => {
+    const data = new DataTransfer()
+    data.setData(
+      'text/html',
+      '<span style="white-space: pre-wrap">负责<span style="font-family: TestSans-Bold">服务平台</span>。\n\n<span style="font-weight:700">核心工作</span>\n• 构建<span style="font-weight:700">消息系统</span>\n• 设计订单服务\n\n<span style="font-weight:700">技术栈</span>\nJava / Redis</span>',
+    )
+    data.setData(
+      'text/plain',
+      '负责服务平台。\n\n核心工作\n• 构建消息系统\n• 设计订单服务\n\n技术栈\nJava / Redis',
+    )
+    element.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  })
+  await expect(
+    editor.locator('strong').filter({ hasText: '服务平台' }),
+  ).toHaveText('服务平台')
+  await expect(
+    editor.locator('li').filter({ hasText: /^构建消息系统$/ }),
+  ).toHaveCount(1)
+  await page.getByRole('button', { name: '预览', exact: true }).click()
+  const job = page.locator('.preview-panel .resume-job').first()
+  await expect(
+    job.locator('strong').filter({ hasText: '消息系统' }),
+  ).toHaveText('消息系统')
+  await expect(
+    job.locator('li').filter({ hasText: /^设计订单服务$/ }),
+  ).toHaveCount(1)
+  await page.reload()
+  await expect(
+    job.locator('strong').filter({ hasText: '核心工作' }),
+  ).toHaveText('核心工作')
+  await expect(
+    job.locator('li').filter({ hasText: /^设计订单服务$/ }),
+  ).toHaveCount(1)
+})
+
+test('PDF 纯文本粘贴识别分行项目符号，不凭空添加强调', async ({ page }) => {
+  await workspace(page)
+  await page.getByRole('button', { name: '编辑内容' }).click()
+  const editor = page.getByRole('textbox', { name: '个人简介', exact: true })
+  await editor.focus()
+  await editor.press('ControlOrMeta+a')
+  await editor.evaluate((element) => {
+    const data = new DataTransfer()
+    data.setData(
+      'text/plain',
+      '平台开发\r\n\r\n• 消息服务\r\n• 订单服务\r\n\r\n技术栈\r\nJava / Redis',
+    )
+    element.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  })
+  await expect(editor.locator('li')).toHaveCount(2)
+  await expect(editor.locator('strong')).toHaveCount(0)
+  await expect(editor.locator('p').filter({ hasText: /^技术栈$/ })).toHaveCount(
+    1,
+  )
+  await page.reload()
+  await expect(page.locator('.preview-panel .resume-summary li')).toHaveCount(2)
+})
+
+test('扁平 PDF HTML 使用匹配的纯文本换行，保留强调、编号和本机 Markdown', async ({
+  page,
+}) => {
+  await workspace(page)
+  await page.getByRole('button', { name: '编辑内容' }).click()
+  const editor = page.getByRole('textbox', { name: '个人简介', exact: true })
+  await editor.focus()
+  await editor.press('ControlOrMeta+a')
+  await editor.evaluate((element) => {
+    const data = new DataTransfer()
+    data.setData(
+      'text/html',
+      '<p>平台开发 3. <span style="font-weight:700;font-style:italic">消息服务</span> 4. 订单服务</p>',
+    )
+    data.setData('text/plain', '平台开发\n3. 消息服务\n4. 订单服务')
+    element.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  })
+  await expect(editor.locator('ol')).toHaveAttribute('start', '3')
+  await expect(editor.locator('li')).toHaveCount(2)
+  await expect(editor.locator('strong em, em strong')).toHaveText('消息服务')
+  const data = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('folio:resumes:v1:guest')!),
+  )
+  expect(data[0].summary).toMatch(/3\. .*消息服务/)
+  expect(data[0].summary).toContain('***消息服务***')
+  await page.emulateMedia({ media: 'print' })
+  await expect(page.locator('.print-only .resume-summary ol')).toHaveAttribute(
+    'start',
+    '3',
+  )
+})
+
+test('在选区粘贴只替换选中文字，并支持一次撤销', async ({ page }) => {
+  await workspace(page)
+  await page.getByRole('button', { name: '编辑内容' }).click()
+  const editor = page.getByRole('textbox', { name: '个人简介', exact: true })
+  await editor.fill('before OLD after')
+  await expect(editor).toHaveText('before OLD after')
+  await editor.evaluate((element) => {
+    const text = element.querySelector('p')!.firstChild!
+    window.getSelection()!.setBaseAndExtent(text, 7, text, 10)
+  })
+  // Wait for the browser selectionchange to reach ProseMirror before sending
+  // a synthetic paste event; real clipboard events arrive in a later task.
+  await expect
+    .poll(() =>
+      editor.evaluate((element) => {
+        const instance = (
+          element as HTMLElement & { editor: import('@tiptap/react').Editor }
+        ).editor
+        const { from, to } = instance.state.selection
+        return instance.state.doc.textBetween(from, to)
+      }),
+    )
+    .toBe('OLD')
+  await editor.evaluate((element) => {
+    const data = new DataTransfer()
+    data.setData('text/html', '<b>NEW</b>')
+    data.setData('text/plain', 'NEW')
+    element.dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: data,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  })
+  await expect(editor).toHaveText('before NEW after')
+  await expect(editor.locator('strong')).toHaveText('NEW')
+  await editor.press('ControlOrMeta+z')
+  await expect(editor).toHaveText('before OLD after')
+})
+
+test('PDF 粘贴超出条数或长度时保留已有草稿', async ({ page }) => {
+  await workspace(page)
+  await page.getByRole('button', { name: '编辑内容' }).click()
+  const editor = page.getByRole('textbox', { name: '工作要点 1', exact: true })
+  const before = await editor.textContent()
+  await paste(
+    editor,
+    `<ul>${Array.from({ length: 13 }, (_, i) => `<li>条目 ${i}</li>`).join('')}</ul>`,
+  )
+  await expect(page.getByRole('alert')).toContainText('最多保留 12 条')
+  await expect(editor).toHaveText(before!)
+  const summary = page.getByRole('textbox', { name: '个人简介', exact: true })
+  const original = await summary.textContent()
+  await paste(summary, `<p>${'字'.repeat(20001)}</p>`)
+  await expect(
+    page.getByRole('alert').filter({ hasText: '内容过长' }),
+  ).toBeVisible()
+  await expect(summary).toHaveText(original!)
 })

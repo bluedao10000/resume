@@ -15,12 +15,21 @@
 - `src/lib/docx-worker.ts`：Mammoth 浏览器版在专用 Worker 中提取 HTML，禁用外部文件和内嵌样式映射，忽略图片；退出时终止 Worker。
 - `src/lib/pdf-import.ts`：PDF.js 内置 Worker，读取文字项与位置，恢复基本行、段落、项目符号；CMap、字体与 wasm 来自本站静态资源。
 - `src/lib/html-to-markdown.ts`：DOMPurify 过滤粘贴/DOCX HTML，Turndown 转为 Markdown；保留加粗、斜体、标题、段落、列表与安全链接。
+- `src/lib/clipboard-html.ts`：粘贴归一化；恢复预格式换行，将分行文本项目符号、连续编号转换为语义列表。HTML 被压成单段而纯文本仍有换行时，仅在文字一致的情况下用纯文本行界分段，保留 HTML 中的强调。
 - `RichTextEditor`：Tiptap，所见即所得编辑、格式工具条、超限反馈；SSR 不立即实例化，编辑器按需加载。
 - `RichText`：React Markdown 语义节点白名单，不解释原始 HTML、图片或可执行 URL。所有正文标题统一为文档内部小标题。
 
 沿用 `summary: string`、`skills: string[]`、`experience[].bullets: string[]`，内容允许 Markdown。不增加 HTML 副本、第二份消息存储或数据库字段。旧纯文本与 JSON 备份继续兼容。技能及工作要点的顶层列表对应数组条目，预览由模板决定外层样式；条目内可保存强调、段落及嵌套列表。`domain/rich-text.ts` 负责数组与编辑器 Markdown 互转，检索使用去格式文本。
 
 `ResumeDocument` 是预览、全部模板与打印的同一个渲染入口。格式跟随简历保存、刷新及 JSON 导出/重新导入，不另存主题颜色、字号或任意 CSS。
+
+## PDF 剪贴板
+
+富文本粘贴在本机读取 `text/html` 和 `text/plain`。先净化 HTML，将 CSS 字重、斜体及可识别的 Bold/Italic 字体名称转换为语义强调，处理 `pre` / `white-space: pre-wrap` 等换行，再丢弃来源 CSS。分行的 `•` 等项目符号与连续编号转换为真正的列表，编号保留起始值；不自动推断标题或合并 PDF 的视觉折行。
+
+纯文本保留分段和文本列表，内容按字面处理，不把任意 Markdown 符号当成格式指令。剪贴板没有提供的粗体、层级、换行无法可靠还原；不根据关键词或数字猜测强调，也不重建 PDF 的颜色、字体、位置或多栏布局。按 Shift 粘贴沿用编辑器的无格式粘贴行为。
+
+归一化结果通过 ProseMirror 的选区替换事务插入，可撤销，不覆盖选区外内容。长度和条目上限沿用现有校验，超限恢复原稿。仍只保存原有 Markdown 字符串，不新增存储字段、不调用模型、不产生 Token 费用。浏览器回归使用合成剪贴板数据，覆盖样式、换行、列表、选区、撤销、超限、预览、打印及刷新；并不代表所有外部 PDF 阅读器已逐一实测。
 
 ## Agent 契约
 
