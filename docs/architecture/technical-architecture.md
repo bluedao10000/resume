@@ -236,7 +236,7 @@ UPLOAD_MAX_BYTES=10485760
 UPLOAD_ALLOWED_TYPES=text/plain,text/markdown,application/json
 UPLOAD_RETENTION_DAYS=30
 EXPORT_RETENTION_DAYS=7
-PUBLIC_TEMPLATE_IDS=editorial,minimal
+PUBLIC_TEMPLATE_IDS=editorial,minimal,professional,technical
 
 # 部署与资源
 CLOUDFLARE_ACCOUNT_ID=

@@ -231,3 +231,15 @@ TypeScript、格式、43 项领域/服务端测试、4 项配置测试、33 项�
 - 配置的真实模型完成 pi-ai 与原生 pi-durable 工具验证；导入返回的简历实际包含技术关键词加粗。
 - 生产域名 10 项文档/富文本浏览器测试通过，使用真实合成 PDF/DOCX 文件和真实解析器，认证与 Agent 使用 fixture；未访问真实用户简历。中文 PDF 本站 CMap 加载正常。
 - 生产 `/api/config` HTTP 200，live / pi-durable 与公开导入限额匹配。Worker gzip 约 2.35MB，启动 18ms。详细实现见 [文档导入与富文本](../architecture/document-import.md)。
+
+## 同日发布：模板与局部内容排版
+
+发布版本：`cca36866-9874-468f-b3bc-69077597db1b`，已部署至原域名，继续使用 live / pi-durable，无数据库迁移或新增环境参数。
+
+参考 Resume.io、Novorésumé、Enhancv、Reactive Resume、Overleaf、超级简历与简历本的一手资料，新增标准单栏、技术清单，保留经典叙事和极简留白。模板页提供简介、技能、工作要点和密度四组局部设置。排版是简历数据，沿用当前条目保存；预览、缩略图、打印与 JSON 备份同源。模板切换不请求模型，不改写事实或新增副本。
+
+新增 `resume_set_presentation` 共享工具，支持通过对话切换预设、局部设置和恢复排版；实际结果返回 `resume.setPresentation` receipt，重复设置 unchanged。普通内容工具保留用户的模板与排版。长经历打印允许跨页，空章节和空联系方式不占位。
+
+验证：TypeScript、格式、52 项领域/服务端测试、4 项配置测试、生产构建通过。原有 43 项浏览器回归通过，新增 4 项模板测试在本地与生产域名均通过，覆盖四模板、局部设置、正文与身份不变、JSON 下载、刷新、打印、聊天排版、手机长词及实际多页 PDF。新增测试中的导出入口定位歧义已修正并重跑通过。浏览器使用认证/模型 fixture；真实配置模型另行验证 pi-ai 原有工具及原生 pi-durable 新排版工具，返回模板、列数与密度实际改变，正文保持不变。生产 `/api/config` HTTP 200；Worker gzip 约 2.35MB，启动 17ms。
+
+详见 [市场调研](../research/resume-templates.md) 与 [排版架构](../architecture/resume-presentation.md)。没有实测第三方 ATS，不承诺解析通过率或强制压缩到单页。

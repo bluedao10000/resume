@@ -2,6 +2,12 @@ import { boundedHistory } from './chat-context'
 import { z } from 'zod'
 import { plainText } from './rich-text'
 import {
+  TemplateSchema,
+  PresentationSchema,
+  parsePresentationRequest,
+  setResumePresentation,
+} from './resume-presentation'
+import {
   SectionOrderSchema,
   moveResumeSection,
   parseSectionMove,
@@ -27,7 +33,8 @@ export const ResumeSchema = z.object({
   education: z.string(),
   label: z.string(),
   updatedAt: z.string(),
-  template: z.enum(['editorial', 'minimal']),
+  template: TemplateSchema,
+  presentation: PresentationSchema.optional(),
   isExample: z.boolean().optional(),
   sectionOrder: SectionOrderSchema.optional(),
 })
@@ -80,6 +87,7 @@ export function finalizeAgentResult(
       id: intent === 'polish' ? source.id : (creationId ?? crypto.randomUUID()),
       label: intent === 'polish' ? source.label : result.resume.label,
       template: source.template,
+      presentation: source.presentation,
       sectionOrder: result.resume.sectionOrder ?? source.sectionOrder,
       isExample: intent !== 'import' && isExampleResume(source),
       updatedAt: new Date().toISOString().slice(0, 10),
@@ -242,6 +250,12 @@ export function demoAgent(
       input.intent,
       source,
     )
+  const presentation =
+    input.intent === 'polish' ? parsePresentationRequest(input.text) : null
+  if (presentation) {
+    const result = setResumePresentation(resume, presentation)
+    return finalizeAgentResult(result, input.intent, result.resume)
+  }
   resume.isExample = input.intent !== 'import' && isExampleResume(source)
   const changes: string[] = []
   let message = ''

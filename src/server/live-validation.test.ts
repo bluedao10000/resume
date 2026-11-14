@@ -71,14 +71,22 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
       config,
     )
     try {
-      const turn = await submitResumeTurn(harness, input)
+      const turn = await submitResumeTurn(harness, {
+        ...input,
+        text: '使用技术清单模板，专业技能改成双列分组，排版紧凑。只改排版，不要修改内容。',
+      })
       await turn.wait(context)
       const durable = await resumeTurnSnapshot(harness)
       expect(durable.status).toBe('completed')
-      if (durable.status === 'completed')
-        expect(durable.result.resume.sectionOrder).toEqual(
-          direct.resume.sectionOrder,
+      if (durable.status === 'completed') {
+        expect(durable.result.operation?.tool).toBe('resume.setPresentation')
+        expect(durable.result.resume.template).toBe('technical')
+        expect(durable.result.resume.presentation?.skills).toBe('columns')
+        expect(durable.result.resume.presentation?.density).toBe('compact')
+        expect(durable.result.resume.experience).toEqual(
+          sampleResume.experience,
         )
+      }
     } finally {
       await harness.close(context)
       await rm(dir, { recursive: true, force: true })

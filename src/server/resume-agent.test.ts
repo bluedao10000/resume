@@ -180,6 +180,49 @@ describe('pi-ai 简历工具执行', () => {
     expect(result.applied).toBe(false)
     expect(result.changes).toEqual([])
   })
+  it('排版工具实际应用预设和局部设置，普通内容工具无法覆盖排版', async () => {
+    const transport = vi.fn<typeof fetch>().mockResolvedValue(
+      toolResponse('resume_set_presentation', {
+        template: 'technical',
+        presentation: { skills: 'columns', density: 'compact' },
+      }),
+    )
+    const result = await generateResume(
+      {
+        ...input,
+        text: '使用技术清单模板，专业技能使用双列，排版紧凑',
+      },
+      config,
+      transport,
+    )
+    expect(result.operation?.tool).toBe('resume.setPresentation')
+    expect(result.resume).toMatchObject({
+      template: 'technical',
+      presentation: { skills: 'columns', density: 'compact' },
+      id: sampleResume.id,
+      isExample: true,
+      experience: sampleResume.experience,
+    })
+    const ordinary = executeResumeTool(
+      'resume_update',
+      update,
+      AgentRequestSchema.parse({
+        ...input,
+        resume: result.resume,
+      }),
+    )
+    expect(ordinary.resume.presentation).toEqual(result.resume.presentation)
+    expect(ordinary.resume.template).toBe('technical')
+    expect(() =>
+      executeResumeTool(
+        'resume_set_presentation',
+        {
+          template: 'technical',
+        },
+        AgentRequestSchema.parse({ ...input, intent: 'import' }),
+      ),
+    ).toThrow()
+  })
   it.each([400, 429])('供应商失败 %s 不暴露响应内容', async (status) => {
     const transport = vi
       .fn<typeof fetch>()

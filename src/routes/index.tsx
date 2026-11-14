@@ -31,6 +31,11 @@ import {
 } from 'lucide-react'
 import { AgentChat, type Intent } from '../components/chat/AgentChat'
 import { ResumeDocument } from '../components/resume/ResumeDocument'
+import { ResumeLayoutControls } from '../components/resume/ResumeLayoutControls'
+import {
+  resumeTemplates,
+  templateDefinition,
+} from '../domain/resume-presentation'
 import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
@@ -828,7 +833,7 @@ function Workspace({
                     onClick={() => setView('templates')}
                   >
                     <LayoutTemplate size={13} />
-                    {resume.template === 'editorial' ? '经典叙事' : '极简留白'}
+                    {templateDefinition(resume.template).name}
                     <ChevronDown size={12} />
                   </button>
                 </div>
@@ -985,34 +990,66 @@ function Workspace({
                 </button>
               </div>
             ) : (
-              <div className="template-grid">
-                {(['editorial', 'minimal'] as const).map((t) => (
-                  <button
-                    className={`template-card ${resume.template === t ? 'chosen' : ''}`}
-                    key={t}
-                    disabled={busy}
-                    onClick={() => {
-                      update({ ...resume, template: t })
-                      setView('chat')
-                      setPanel('preview')
-                      setMobile('preview')
-                      setNotice('简历模板已切换。')
-                    }}
-                  >
-                    <div className="mini-preview">
-                      <ResumeDocument resume={{ ...resume, template: t }} />
-                    </div>
-                    <div>
-                      <strong>
-                        {t === 'editorial' ? '01 / 经典叙事' : '02 / 极简留白'}
-                      </strong>
-                      <span>
-                        {resume.template === t ? '当前使用' : '使用此模板'}
-                        <ArrowRight size={15} />
-                      </span>
-                    </div>
-                  </button>
-                ))}
+              <div className="template-workspace">
+                <ResumeLayoutControls
+                  resume={resume}
+                  disabled={busy}
+                  onChange={update}
+                  onPreview={() => {
+                    setView('chat')
+                    setPanel('preview')
+                    setMobile('preview')
+                  }}
+                />
+                <div className="template-grid">
+                  {resumeTemplates.map(
+                    ({ id: t, name, description }, index) => (
+                      <button
+                        className={`template-card ${resume.template === t ? 'chosen' : ''}`}
+                        key={t}
+                        aria-pressed={resume.template === t}
+                        disabled={busy}
+                        onClick={() => {
+                          update({
+                            ...resume,
+                            template: t,
+                            presentation:
+                              resume.template === t
+                                ? resume.presentation
+                                : undefined,
+                          })
+                          setView('chat')
+                          setPanel('preview')
+                          setMobile('preview')
+                          setNotice('简历模板已切换。')
+                        }}
+                      >
+                        <div className="mini-preview" aria-hidden="true">
+                          <ResumeDocument
+                            resume={{
+                              ...resume,
+                              template: t,
+                              presentation:
+                                resume.template === t
+                                  ? resume.presentation
+                                  : undefined,
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <strong>
+                            {String(index + 1).padStart(2, '0')} / {name}
+                          </strong>
+                          <p>{description}</p>
+                          <span>
+                            {resume.template === t ? '当前使用' : '使用此模板'}
+                            <ArrowRight size={15} />
+                          </span>
+                        </div>
+                      </button>
+                    ),
+                  )}
+                </div>
               </div>
             )}
           </section>

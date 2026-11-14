@@ -51,7 +51,7 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 
 简介、技能和工作要点沿用字符串字段，内容允许受限 Markdown；Tiptap 编辑，React Markdown 渲染，HTML 粘贴先净化。PDF/DOCX 在浏览器本地提取并由用户核对，不上传附件；PDF.js 使用本站静态资源，Mammoth 使用专用 Worker。详细流程、限制与配置见 [文档导入与富文本](../architecture/document-import.md)。
 
-当前模板使用 `editorial / minimal` 标识，读取同一 Resume。`sectionOrder` 是四个唯一章节 ID 的有序数组，旧数据使用默认顺序。章节工具只更新该字段，预览、两种模板和打印均按它渲染。后续可扩展自定义章节与分页布局。
+当前模板使用 `editorial / minimal / professional / technical` 标识，读取同一 Resume。可选 `presentation` 保存简介、技能、工作要点和密度，旧记录读取模板预设。模板注册表与局部控件见 [模板与内容排版](../architecture/resume-presentation.md)。`sectionOrder` 是四个唯一章节 ID 的有序数组，旧数据使用默认顺序。章节工具只更新该字段，预览、全部模板和打印均按它渲染。后续可扩展自定义章节与分页布局。
 
 当前快照包含 id、label、updatedAt，但没有 parentVersionId 和字段级来源。普通聊天修改、润色和人工编辑均更新当前条目；导入与 JD 定制新增条目，定制保留来源。`finalizeAgentResult` 统一 demo/live 的身份、名称、模板、示例来源与更新时间；polish 使用来源 ID 与名称，import/tailor 生成新 ID，忽略模型提供的 ID。前端按 ID 原位更新或新增，不重新排序已存在的条目。当前不能对外声称完整审计或聊天修改撤销。
 
@@ -70,7 +70,7 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 1. assistant-ui 恢复 initialMessages，管理唯一消息状态；应用保存完整对话与 pendingRequest。
 2. 请求携带当前简历、最多 20 份候选、稳定 threadId/requestId 与历史窗口。模型上下文最多 40 条、合计 32,000 字符，服务端再次限制；导入排除旧人物历史。
 3. API 校验输入、长度与 session。live 按 `.env` 选择 pi-ai 或原生 pi-durable，共享 pi models 与领域工具；demo 仍为确定性规则。
-4. 模型选择一项 `resume_reorder_sections`、`resume_update` 或 `conversation_reply`。工具参数经校验后执行。修改确认文字来自实际差异；只读和无变化结果为 `applied:false`，不写库、不显示更新卡片。无效或多项调用不会应用。
+4. 模型选择一项 `resume_reorder_sections`、`resume_set_presentation`、`resume_update` 或 `conversation_reply`。工具参数经校验后执行。修改确认文字来自实际差异；只读和无变化结果为 `applied:false`，不写库、不显示更新卡片。无效或多项调用不会应用。
 5. polish 保留 ID、名称、模板；import/tailor 的新 ID 由 requestId 派生。前端按 ID 更新，避免请求恢复时重复插入。
 6. durable actor key 是已验证 userId + threadId + requestId。Harness 原生注册工具，执行结果 terminate；纯变换没有外部业务写入，声明 replay:safe。相同 ID 不同正文拒绝。POST 返回 202，GET 轮询快照，DELETE 独立取消。
 7. DO 通过官方 SQLite storage、onWake/wake 与 alarm 恢复任务。构造时预置 alarm，活动时保留一分钟心跳，最早唤醒优先，空闲清除。断开页面不取消 durable 任务，刷新复用原请求；轻量中断不自动重放。

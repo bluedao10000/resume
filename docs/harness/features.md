@@ -34,7 +34,13 @@ type Resume = {
   education: string
   label: string
   updatedAt: string
-  template: 'editorial' | 'minimal'
+  template: 'editorial' | 'minimal' | 'professional' | 'technical'
+  presentation?: {
+    summary: 'plain' | 'inset'
+    skills: 'tags' | 'list' | 'columns'
+    experience: 'bullets' | 'ruled'
+    density: 'comfortable' | 'compact'
+  }
   isExample?: boolean
   sectionOrder?: ('summary' | 'experience' | 'skills' | 'education')[]
 }
@@ -79,6 +85,12 @@ type Resume = {
 | 502  | 模型失败、超时、无效返回或认证服务异常                        |
 
 text 最多 20,000 JS 字符，模型超时读取 `.env` 的 AGENT_TIMEOUT_MS（当前 45 秒）。正文读取仍是 `request.text()`，未实现流式读入限额。响应不泄露 provider 原始报错。
+
+## 模板与内容排版
+
+四模板：经典叙事、极简留白、标准单栏、技术清单。注册表 `domain/resume-presentation.ts` 提供统一 ID、名称、描述与预设。模板页的 `ResumeLayoutControls` 支持简介正文/重点区块、技能标签/逐项/双列、工作要点项目符号/分隔段落、舒展/紧凑密度。设置随每份简历保存；切换其他模板使用其预设，重新选当前模板保持自定义。恢复模板排版不删除正文。模板卡片隐藏重复文档的无障碍树，仅暴露动作与名称。
+
+`resume_set_presentation` 接收可选 template、局部 presentation 或 reset；仅用于 polish。两种 pi 运行时共用校验及执行结果，实际变更返回 `resume.setPresentation`。重复设置 unchanged，不创建简历；内容工具保留来源呈现。打印允许长经历跨页，空联系方式与章节不产生占位区块。详见 [模板与内容排版](../architecture/resume-presentation.md)。
 
 ## 导入与定制规则
 

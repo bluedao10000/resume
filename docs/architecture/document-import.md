@@ -20,7 +20,7 @@
 
 沿用 `summary: string`、`skills: string[]`、`experience[].bullets: string[]`，内容允许 Markdown。不增加 HTML 副本、第二份消息存储或数据库字段。旧纯文本与 JSON 备份继续兼容。技能及工作要点的顶层列表对应数组条目，预览由模板决定外层样式；条目内可保存强调、段落及嵌套列表。`domain/rich-text.ts` 负责数组与编辑器 Markdown 互转，检索使用去格式文本。
 
-`ResumeDocument` 是预览、两套模板与打印的同一个渲染入口。格式跟随简历保存、刷新及 JSON 导出/重新导入，不另存主题颜色、字号或任意 CSS。
+`ResumeDocument` 是预览、全部模板与打印的同一个渲染入口。格式跟随简历保存、刷新及 JSON 导出/重新导入，不另存主题颜色、字号或任意 CSS。
 
 ## Agent 契约
 

@@ -45,6 +45,7 @@ React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is t
 - The conversation owns full viewport height: no shared page header, toolbar or source card above messages. Keep tools in the composer popover and mobile preview/account navigation in the sidebar. Verify long-message scrolling and composer visibility.
 
 - Section layout is data (`sectionOrder`), shared by preview/templates/print. Success messages must follow verified tool results, not model claims.
+- Template IDs/defaults live in domain/resume-presentation.ts. Optional presentation stores per-resume summary/skills/bullets/density, never transforms facts. resume_set_presentation is the shared validated layout tool; ordinary resume_update must preserve presentation. See docs/architecture/resume-presentation.md.
 - Chat archives are scoped by identity and restored through assistant-ui initialMessages. Pass bounded history to pi; imports exclude prior identities. Durable refresh must reuse the immutable pending request/requestId. A disconnect is not an abort.
 
 - Billing is server-authoritative. Preserve atomic reservation, tariff snapshots, tenant isolation and idempotent settlement in both pi runtimes. Read `docs/architecture/billing.md` before changing metering or Stripe. Never grant paid access from a redirect URL, client state, unverified webhook or estimated tokens.

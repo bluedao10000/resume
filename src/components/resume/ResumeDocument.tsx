@@ -1,7 +1,9 @@
 import { isExampleResume, type Resume } from '../../domain/resume'
 import { sectionOrder } from '../../domain/resume-layout'
 import { RichText } from './RichText'
+import { presentationFor } from '../../domain/resume-presentation'
 export function ResumeDocument({ resume }: { resume: Resume }) {
+  const presentation = presentationFor(resume)
   const sections = {
     summary: resume.summary ? (
       <ResumeSection key="summary" title="关于我" english="PROFILE">
@@ -17,7 +19,7 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
               <time>{job.period}</time>
             </div>
             <h3>{job.role}</h3>
-            <ul>
+            <ul className="resume-bullets">
               {job.bullets.map((b, j) => (
                 <li key={j}>
                   <RichText value={b} />
@@ -51,6 +53,10 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
   return (
     <article
       className={`resume-paper ${resume.template}`}
+      data-summary={presentation.summary}
+      data-skills={presentation.skills}
+      data-experience={presentation.experience}
+      data-density={presentation.density}
       aria-label="简历预览"
     >
       {isExampleResume(resume) ? (
@@ -63,9 +69,11 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
         </div>
         <span className="resume-monogram">{resume.name.slice(0, 1)}</span>
       </header>
-      <div className="resume-contact">
-        {[resume.location, resume.email].filter(Boolean).join('　 /　 ')}
-      </div>
+      {resume.location || resume.email ? (
+        <div className="resume-contact">
+          {[resume.location, resume.email].filter(Boolean).join('　 /　 ')}
+        </div>
+      ) : null}
       {sectionOrder(resume).map((id) => sections[id])}
       <footer className="resume-footer">
         <span>
