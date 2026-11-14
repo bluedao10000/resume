@@ -581,6 +581,42 @@ summary {
   flex-shrink: 0;
   padding: 16px 24px 20px;
 }
+.import-prompt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+}
+.import-prompt:hover {
+  background: var(--sidebar);
+}
+.import-prompt:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.import-prompt > span {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  flex: 1;
+}
+.import-prompt > svg {
+  flex-shrink: 0;
+}
+.import-prompt strong {
+  font-weight: 500;
+}
+.import-prompt > span > span {
+  color: var(--muted);
+}
 .composer {
   border: 1px solid #dfe0e5;
   border-radius: 9px;

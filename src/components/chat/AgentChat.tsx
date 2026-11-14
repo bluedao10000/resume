@@ -11,6 +11,7 @@ import {
 } from '@assistant-ui/react'
 import {
   ArrowUp,
+  ArrowRight,
   Check,
   FileText,
   Plus,
@@ -21,6 +22,7 @@ import {
 import {
   AgentResultSchema,
   inferIntent,
+  isExampleResume,
   type AgentResult,
   type Resume,
   type AgentRequestSchema,
@@ -52,6 +54,7 @@ type Props = {
 }
 export function AgentChat(props: Props) {
   const [toolsOpen, setToolsOpen] = useState(false)
+  const needsImport = !props.library.some((resume) => !isExampleResume(resume))
   const current = useRef(props)
   current.current = props
   const adapter = useMemo<ChatModelAdapter>(
@@ -269,6 +272,22 @@ export function AgentChat(props: Props) {
           ) : null}
         </ThreadPrimitive.Viewport>
         <div className="composer-container">
+          {needsImport ? (
+            <AuiIf condition={(s) => s.thread.isEmpty && !s.thread.isRunning}>
+              <button
+                type="button"
+                className="import-prompt"
+                onClick={props.onImport}
+              >
+                <FileText size={17} aria-hidden="true" />
+                <span>
+                  <strong>导入简历</strong>
+                  <span>粘贴原文或选择文本文件</span>
+                </span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </button>
+            </AuiIf>
+          ) : null}
           <ComposerPrimitive.Root className="composer">
             <ComposerPrimitive.Input
               aria-label="发送给 Folio"

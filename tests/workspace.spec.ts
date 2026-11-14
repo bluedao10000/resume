@@ -189,6 +189,7 @@ test('对话独享全屏高度，长消息独立滚动，工具菜单不挤占�
   await page.setViewportSize({ width: 1440, height: 900 })
   await openWorkspace(page)
   await expect(page.locator('.chat-scroll')).toBeEmpty()
+  await expect(page.locator('.import-prompt')).toBeVisible()
   const initialHeight = await page
     .locator('.chat-scroll')
     .evaluate((el) => el.clientHeight)
@@ -204,6 +205,7 @@ test('对话独享全屏高度，长消息独立滚动，工具菜单不挤占�
   ).toBeFocused()
   await resumeAction(page, '润色简历')
   await expect(page.locator('.message-text')).toContainText('第 80 行')
+  await expect(page.locator('.import-prompt')).toHaveCount(0)
   for (const viewport of [
     { width: 1440, height: 900 },
     { width: 390, height: 844 },
@@ -890,7 +892,18 @@ test('聊天润色、JD 定制、编辑、持久化与模板切换', async ({ pa
 test('导入新简历，跨视图检索与 JSON 文件导入', async ({ page }) => {
   await openWorkspace(page)
   await expect(page.locator('.app-shell')).toHaveAttribute('data-ready', 'true')
-  await resumeAction(page, '导入简历')
+  let calls = 0
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/api/agent'))
+      calls++
+  })
+  await page.locator('.import-prompt').click()
+  await expect(page.getByRole('dialog', { name: '导入简历' })).toBeVisible()
+  await page.keyboard.press('Escape')
+  expect(calls).toBe(0)
+  await expect(page.locator('.nav-count')).toHaveText('1')
+  await expect(page.locator('.import-prompt')).toBeVisible()
+  await page.locator('.import-prompt').click()
   await page.getByRole('button', { name: '填入示例' }).click()
   await page.getByRole('button', { name: '整理为简历' }).click()
   await expect(page.locator('.preview-panel .resume-heading h1')).toHaveText(
@@ -899,6 +912,13 @@ test('导入新简历，跨视图检索与 JSON 文件导入', async ({ page }) 
   await expect(page.locator('.preview-panel .resume-paper')).not.toContainText(
     '山海科技',
   )
+  await expect(page.locator('.import-prompt')).toHaveCount(0)
+  await page.getByRole('button', { name: '开启新对话' }).click()
+  await expect(page.locator('.user-message')).toHaveCount(0)
+  await expect(page.locator('.import-prompt')).toHaveCount(0)
+  await page.reload()
+  await expect(page.locator('.app-shell')).toHaveAttribute('data-ready', 'true')
+  await expect(page.locator('.import-prompt')).toHaveCount(0)
   await page.getByRole('button', { name: '我的简历库' }).click()
   await page.getByPlaceholder('搜索姓名、职位或版本…').fill('陈亦舟')
   await expect(page.locator('.resume-library-card')).toHaveCount(1)
