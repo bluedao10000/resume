@@ -21,7 +21,19 @@ test.beforeEach(async ({ page }) => {
   // Browser workflows are deterministic even when the developer uses live mode.
   // The real provider path is verified separately with synthetic input.
   await page.route('**/api/config', (route) =>
-    route.fulfill({ json: { mode: 'demo', authConfigured: false } }),
+    route.fulfill({
+      json: {
+        mode: 'demo',
+        authConfigured: false,
+        importLimits: {
+          maxFileBytes: 10485760,
+          maxPages: 30,
+          maxTextCharacters: 20000,
+          timeoutMs: 20000,
+          maxExpandedBytes: 52428800,
+        },
+      },
+    }),
   )
   await page.route('**/api/auth/get-session', (route) =>
     route.fulfill({ json: null }),
@@ -469,7 +481,19 @@ test('其他标签页删除后，当前导航和预览同步且不重放 Agent',
   await openWorkspace(page)
   const second = await context.newPage()
   await second.route('**/api/config', (route) =>
-    route.fulfill({ json: { mode: 'demo', authConfigured: false } }),
+    route.fulfill({
+      json: {
+        mode: 'demo',
+        authConfigured: false,
+        importLimits: {
+          maxFileBytes: 10485760,
+          maxPages: 30,
+          maxTextCharacters: 20000,
+          timeoutMs: 20000,
+          maxExpandedBytes: 52428800,
+        },
+      },
+    }),
   )
   await second.route('**/api/auth/get-session', (route) =>
     route.fulfill({ json: null }),

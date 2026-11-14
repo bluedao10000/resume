@@ -1,10 +1,11 @@
 import { isExampleResume, type Resume } from '../../domain/resume'
 import { sectionOrder } from '../../domain/resume-layout'
+import { RichText } from './RichText'
 export function ResumeDocument({ resume }: { resume: Resume }) {
   const sections = {
     summary: resume.summary ? (
       <ResumeSection key="summary" title="关于我" english="PROFILE">
-        <p className="resume-summary">{resume.summary}</p>
+        <RichText className="resume-summary" value={resume.summary} />
       </ResumeSection>
     ) : null,
     experience: resume.experience.length ? (
@@ -18,7 +19,9 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
             <h3>{job.role}</h3>
             <ul>
               {job.bullets.map((b, j) => (
-                <li key={j}>{b}</li>
+                <li key={j}>
+                  <RichText value={b} />
+                </li>
               ))}
             </ul>
           </div>
@@ -28,8 +31,13 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
     skills: resume.skills.length ? (
       <ResumeSection key="skills" title="专业技能" english="EXPERTISE">
         <div className="resume-skills">
-          {resume.skills.map((s) => (
-            <span key={s}>{s}</span>
+          {resume.skills.map((s, i) => (
+            <div
+              key={i}
+              className={`resume-skill ${s.includes('\n') ? 'resume-skill-block' : ''}`}
+            >
+              <RichText value={s} />
+            </div>
           ))}
         </div>
       </ResumeSection>

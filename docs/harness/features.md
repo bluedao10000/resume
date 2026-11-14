@@ -12,7 +12,7 @@
 | ConfirmDelete           | `title, name, confirmLabel?, onCancel, onConfirm`                                     | 默认取消聚焦，确认后才调用删除动作            |
 | LandingPage             | `canLogin, isLoading, error, onLogin, onDemo?`                                        | 未登录产品页、Google 登录及显式演示入口       |
 
-组件路径在 `src/components/`。聊天返回数据不拼接 HTML、不执行模型给出的 JSX；文档全部通过 React 文字节点渲染。
+组件路径在 `src/components/`。聊天返回数据不拼接 HTML、不执行模型给出的 JSX；富文本通过受限 Markdown 节点渲染，不插入原始 HTML。
 
 ## Resume 数据契约
 
@@ -46,7 +46,7 @@ type Resume = {
 
 ### GET /api/config
 
-返回 `{ mode: 'demo' | 'live', authConfigured: boolean, runtime: 'pi-ai' | 'pi-durable' }`。不返回密钥，配置失败显示重试。
+返回 `{ mode: 'demo' | 'live', authConfigured: boolean, runtime: 'pi-ai' | 'pi-durable' }`。另包含公开的 `importLimits: { maxFileBytes, maxPages, maxTextCharacters, timeoutMs, maxExpandedBytes }` 与现有计费公开参数。不返回密钥，配置失败显示重试。
 
 ### GET|POST /api/auth/$
 
@@ -82,7 +82,7 @@ text 最多 20,000 JS 字符，模型超时读取 `.env` 的 AGENT_TIMEOUT_MS（
 
 ## 导入与定制规则
 
-演示导入首行作为姓名、第二行作为职位，提取邮箱与出现的已知技能，将其余内容保留在 summary。清空旧工作经历、教育、城市，不把示例事实串入新简历。不会自动提取 PDF/DOCX；文件选择只接受 TXT/MD/JSON，小于 150KB。
+演示导入首行作为姓名、第二行作为职位，提取邮箱与出现的已知技能，将其余内容保留在 summary。清空旧工作经历、教育、城市，不把示例事实串入新简历。支持 PDF、DOCX、TXT、MD 和 Folio JSON。PDF.js 在本地提取 PDF 文字，Mammoth 在专用 Web Worker 中提取 DOCX 标题、强调与列表；用户核对原文后才发送 Agent。默认限制 10MB、PDF 30 页、提取 20,000 字符、20 秒、DOCX 声明解压大小 50MB，均由 `.env` 配置。失败、超限与取消不覆盖原文或自动创建简历；不静默截断。扫描件提示先 OCR，密码文档需先解锁，旧 DOC 需另存 DOCX。详细边界见 [文档导入架构](../architecture/document-import.md)。
 
 关键词检索在当前简历与最近 20 个候选中，先限定同名且邮箱不冲突的候选，再根据预设技能词表与原文大小写归一匹配选取最高命中来源；平分时优先当前简历。不是多文档合并，没有语义召回。tailor 对有依据的技能/经历排序，另列 missing。零命中时也允许草稿，但不宣称匹配度高。
 

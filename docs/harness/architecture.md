@@ -49,6 +49,8 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 
 `ResumeDocument` 是所有预览、模板缩略图和打印的同一数据投影。`ResumeEditor` 是结构化输入层。`ResumeSchema` 是持久化、导入、模型与 UI 之间的契约。
 
+简介、技能和工作要点沿用字符串字段，内容允许受限 Markdown；Tiptap 编辑，React Markdown 渲染，HTML 粘贴先净化。PDF/DOCX 在浏览器本地提取并由用户核对，不上传附件；PDF.js 使用本站静态资源，Mammoth 使用专用 Worker。详细流程、限制与配置见 [文档导入与富文本](../architecture/document-import.md)。
+
 当前模板使用 `editorial / minimal` 标识，读取同一 Resume。`sectionOrder` 是四个唯一章节 ID 的有序数组，旧数据使用默认顺序。章节工具只更新该字段，预览、两种模板和打印均按它渲染。后续可扩展自定义章节与分页布局。
 
 当前快照包含 id、label、updatedAt，但没有 parentVersionId 和字段级来源。普通聊天修改、润色和人工编辑均更新当前条目；导入与 JD 定制新增条目，定制保留来源。`finalizeAgentResult` 统一 demo/live 的身份、名称、模板、示例来源与更新时间；polish 使用来源 ID 与名称，import/tailor 生成新 ID，忽略模型提供的 ID。前端按 ID 原位更新或新增，不重新排序已存在的条目。当前不能对外声称完整审计或聊天修改撤销。

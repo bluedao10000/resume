@@ -1,5 +1,6 @@
 import { boundedHistory } from './chat-context'
 import { z } from 'zod'
+import { plainText } from './rich-text'
 import {
   SectionOrderSchema,
   moveResumeSection,
@@ -186,6 +187,7 @@ export function matchJD(resume: Resume, jd: string) {
     ...resume.skills,
     ...resume.experience.flatMap((e) => [e.role, ...e.bullets]),
   ]
+    .map(plainText)
     .join(' ')
     .toLowerCase()
   return {
@@ -248,9 +250,9 @@ export function demoAgent(
       .split(/\n/)
       .map((l) => l.trim())
       .filter(Boolean)
-    resume.name = lines[0].slice(0, 40)
+    resume.name = plainText(lines[0]).slice(0, 40)
     resume.email = input.text.match(/[\w.+-]+@[\w.-]+\.[a-zA-Z]+/)?.[0] ?? ''
-    resume.title = lines[1]?.slice(0, 80) ?? '待补充职位'
+    resume.title = lines[1] ? plainText(lines[1]).slice(0, 80) : '待补充职位'
     resume.location = ''
     resume.summary = lines.slice(2).join('\n') || '请继续补充你的工作经历。'
     resume.experience = []

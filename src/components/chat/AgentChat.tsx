@@ -28,6 +28,7 @@ import {
   type AgentRequestSchema,
 } from '../../domain/resume'
 import type { z } from 'zod'
+import { htmlToMarkdown } from '../../lib/html-to-markdown'
 import {
   boundedHistory,
   type ChatThread,
@@ -54,6 +55,7 @@ type Props = {
 }
 export function AgentChat(props: Props) {
   const [toolsOpen, setToolsOpen] = useState(false)
+  const [pasteError, setPasteError] = useState('')
   const needsImport = !props.library.some((resume) => !isExampleResume(resume))
   const current = useRef(props)
   current.current = props
@@ -272,6 +274,7 @@ export function AgentChat(props: Props) {
           ) : null}
         </ThreadPrimitive.Viewport>
         <div className="composer-container">
+          {pasteError ? <p role="alert">{pasteError}</p> : null}
           {needsImport ? (
             <AuiIf condition={(s) => s.thread.isEmpty && !s.thread.isRunning}>
               <button
@@ -282,7 +285,7 @@ export function AgentChat(props: Props) {
                 <FileText size={17} aria-hidden="true" />
                 <span>
                   <strong>导入简历</strong>
-                  <span>粘贴原文或选择文本文件</span>
+                  <span>粘贴原文或导入 PDF、Word</span>
                 </span>
                 <ArrowRight size={16} aria-hidden="true" />
               </button>
@@ -300,6 +303,22 @@ export function AgentChat(props: Props) {
               }
               rows={2}
               maxLength={20000}
+              onPaste={(event) => {
+                const html = event.clipboardData.getData('text/html')
+                if (!html) return
+                event.preventDefault()
+                const input = event.currentTarget
+                const value =
+                  input.value.slice(0, input.selectionStart) +
+                  htmlToMarkdown(html) +
+                  input.value.slice(input.selectionEnd)
+                if (value.length > 20000) {
+                  setPasteError('粘贴内容超过 20,000 字符，请分段导入。')
+                  return
+                }
+                setPasteError('')
+                runtime.thread.composer.setText(value)
+              }}
             />
             <div className="composer-bottom">
               <div className="composer-source">

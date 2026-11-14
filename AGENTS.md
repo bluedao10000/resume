@@ -37,6 +37,7 @@ React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is t
 - Live signed-out users see the landing page, not the workspace. Demo entry is explicit. Never silently downgrade after a config failure.
 - Preserve example provenance on generated polish/tailor versions, clear it on fresh imports, and render explicit example labels in preview/print.
 - ResumeDocument is the single renderer for preview, templates and print.
+- Summary, skills and experience bullets use Markdown-compatible strings, never a parallel HTML store. RichTextEditor edits and RichText renders the semantic whitelist. Sanitize pasted/document HTML. PDF/DOCX extraction is browser-local, cancellable and bounded by IMPORT_* from .env; review before Agent, no OCR or layout fidelity claims. See docs/architecture/document-import.md.
 - Scope changes must not write old identity data into the new localStorage partition. Discard stale run results.
 - Demo is deterministic and visibly labelled; live requires a session and configured server-side provider.
 - Update product/harness docs with behavior changes; report external integration validation honestly.

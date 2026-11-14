@@ -65,6 +65,8 @@ npm run config:generate
 
 登录后读取 `folio:resumes:v1:<userId>`，访客草稿保留在 guest 分区。原型不自动合并，建议导出/导入 JSON。D1 的认证数据不等于云端简历库。
 
+PDF/DOCX 在浏览器本地提取。导入限额统一写入 `.env` 的 `IMPORT_*` 参数，经配置生成后由 `/api/config` 公开数字值；dev/build 自动复制 PDF.js 静态资源和许可证。文件解析失败时检查浏览器 Worker 与 `/pdfjs/` 资源，再核对密码、扫描件、损坏和超限，勿记录用户原文。完整参数和排障边界见 [文档导入与富文本](../architecture/document-import.md)。
+
 ## 真实模型
 
 设置 `APP_MODE=live`，配置 `AI_BASE_URL`、`AI_API_KEY`、`AI_MODEL` 和 `AI_API`。所有模型调用经 pi-ai；`openai-responses` 调用 `/responses`，`openai-completions` 调用 `/chat/completions`。供应商须支持对应的函数工具调用，不再依赖 JSON object 模式。

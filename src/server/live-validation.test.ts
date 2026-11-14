@@ -52,7 +52,7 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
         ...input,
         intent: 'import',
         requestId: crypto.randomUUID(),
-        text: '王明\n前端工程师\nwang@example.com\n使用 React 和 TypeScript 开发后台页面。',
+        text: '王明\n前端工程师\nwang@example.com\n使用 **React** 和 **TypeScript** 开发后台页面。请保留技术关键词的加粗格式。',
       },
       config,
     )
@@ -62,6 +62,9 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
     expect(imported.resume.isExample).toBe(false)
     expect(imported.resume.experience).toEqual([])
     expect(imported.resume.education).toBe('')
+    expect(
+      [imported.resume.summary, ...imported.resume.skills].join('\n'),
+    ).toMatch(/\*\*(?:React|TypeScript)\*\*/)
     const dir = await mkdtemp(join(tmpdir(), 'folio-live-'))
     const harness = await openResumeHarness(
       await openNodeSqliteStorage(join(dir, 'turn.db')),

@@ -49,6 +49,11 @@ test('Agent runtime, protocol and positive limits are validated before deploymen
     { BILLING_FREE_CREDITS: '-1' },
     { BILLING_INPUT_CREDITS_PER_MILLION: 'NaN' },
     { BILLING_PLUS_MONTHLY_CENTS: '999' },
+    { IMPORT_MAX_FILE_BYTES: '0' },
+    { IMPORT_MAX_PDF_PAGES: '-1' },
+    { IMPORT_MAX_TEXT_CHARACTERS: '20001' },
+    { IMPORT_TIMEOUT_MS: 'NaN' },
+    { IMPORT_MAX_EXPANDED_BYTES: '0' },
   ])
     assert.throws(
       () => parseConfiguration({ ...example, ...override }),

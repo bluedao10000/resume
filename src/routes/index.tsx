@@ -1,6 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Button } from '@astryxdesign/core/Button'
 import {
   ArrowDownToLine,
@@ -23,7 +31,7 @@ import {
 } from 'lucide-react'
 import { AgentChat, type Intent } from '../components/chat/AgentChat'
 import { ResumeDocument } from '../components/resume/ResumeDocument'
-import { ResumeEditor } from '../components/resume/ResumeEditor'
+import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
 import { LandingPage } from '../components/LandingPage'
@@ -51,10 +59,21 @@ import {
   restoreResumeLibrary,
 } from '../domain/resume-library'
 export const Route = createFileRoute('/')({ component: Entry })
+const ResumeEditor = lazy(() =>
+  import('../components/resume/ResumeEditor').then((module) => ({
+    default: module.ResumeEditor,
+  })),
+)
+const RichTextEditor = lazy(() =>
+  import('../components/resume/RichTextEditor').then((module) => ({
+    default: module.RichTextEditor,
+  })),
+)
 const ConfigSchema = z.object({
   mode: z.enum(['demo', 'live']),
   runtime: z.enum(['pi-ai', 'pi-durable']).default('pi-ai'),
   authConfigured: z.boolean(),
+  importLimits: ImportLimitsSchema.optional(),
 })
 type Config = z.infer<typeof ConfigSchema>
 type Session = typeof authClient.$Infer.Session
@@ -191,6 +210,9 @@ function Workspace({
     'import' | 'jd' | 'export' | 'login' | 'history' | 'billing' | null
   >(null)
   const [text, setText] = useState('')
+  const [importing, setImporting] = useState(false)
+  const importController = useRef<AbortController | null>(null)
+  useEffect(() => () => importController.current?.abort(), [])
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('billing'))
       setModal('billing')
@@ -549,13 +571,21 @@ function Workspace({
   }
   async function importFile(file?: File) {
     if (!file) return
-    if (file.size > 150000) {
-      setNotice('文件过大，请使用小于 150KB 的文本文件。')
-      return
-    }
+    importController.current?.abort()
+    const controller = new AbortController()
+    importController.current = controller
+    setImporting(true)
     try {
-      const value = await file.text()
-      if (file.name.endsWith('.json')) {
+      if (!config.importLimits)
+        throw new Error('文档导入配置未加载，请刷新后重试。')
+      const { extractDocument } = await import('../lib/document-import')
+      const value = await extractDocument(
+        file,
+        config.importLimits,
+        controller.signal,
+      )
+      if (controller.signal.aborted) return
+      if (file.name.toLowerCase().endsWith('.json')) {
         const parsed = ResumeSchema.safeParse(JSON.parse(value))
         if (!parsed.success) throw new Error('JSON 需要符合 Folio 简历结构。')
         const r = { ...parsed.data, id: crypto.randomUUID() }
@@ -572,7 +602,10 @@ function Workspace({
         setText(value)
       }
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : '文件读取失败')
+      if (!controller.signal.aborted)
+        setNotice(e instanceof Error ? e.message : '文件读取失败')
+    } finally {
+      if (importController.current === controller) setImporting(false)
     }
   }
   return (
@@ -817,11 +850,13 @@ function Workspace({
                     <ResumeDocument resume={resume} />
                   </>
                 ) : (
-                  <ResumeEditor
-                    key={resume.id}
-                    resume={resume}
-                    onChange={(value) => update(value, true)}
-                  />
+                  <Suspense fallback={<p role="status">正在加载编辑器…</p>}>
+                    <ResumeEditor
+                      key={resume.id}
+                      resume={resume}
+                      onChange={(value) => update(value, true)}
+                    />
+                  </Suspense>
                 )}
               </div>
               <div className="preview-status">
@@ -1014,38 +1049,61 @@ function Workspace({
       {modal === 'import' || modal === 'jd' ? (
         <Modal
           title={modal === 'import' ? '导入简历' : '按岗位定制'}
-          onClose={() => setModal(null)}
+          onClose={() => {
+            importController.current?.abort()
+            setImporting(false)
+            setModal(null)
+          }}
         >
           {modal === 'import' ? (
             <label className="upload-zone">
               <FilePlus2 size={22} />
-              <strong>选择文本文件或 Folio JSON</strong>
-              <span>TXT、MD、JSON · 最大 150KB</span>
+              <strong>选择简历文件</strong>
+              <span>
+                PDF、DOCX、TXT、MD、JSON
+                {config.importLimits
+                  ? ` · 最大 ${Math.round(config.importLimits.maxFileBytes / 1024 / 1024)}MB`
+                  : ''}
+              </span>
               <input
                 type="file"
-                accept=".txt,.md,.json"
-                onChange={(e) => void importFile(e.target.files?.[0])}
+                aria-label="选择简历文件"
+                accept={documentAccept}
+                onChange={(e) => {
+                  void importFile(e.target.files?.[0])
+                  e.target.value = ''
+                }}
               />
             </label>
           ) : null}
-          <label className="modal-input-label">
-            {modal === 'import' ? '简历原文' : '岗位描述（JD）'}
-            <textarea
-              autoFocus
-              value={text}
-              maxLength={20000}
-              rows={9}
-              onChange={(e) => setText(e.target.value)}
-              placeholder={
-                modal === 'import'
-                  ? '张小林\n前端工程师\n邮箱：hello@example.com\n曾负责…'
-                  : '岗位名称、公司、工作职责、任职要求…'
-              }
-            />
-          </label>
+          {modal === 'import' ? (
+            <Suspense fallback={<p role="status">正在加载编辑器…</p>}>
+              <RichTextEditor
+                label="简历原文"
+                value={text}
+                onChange={setText}
+                maxLength={config.importLimits?.maxTextCharacters ?? 20000}
+                disabled={importing}
+              />
+            </Suspense>
+          ) : (
+            <label className="modal-input-label">
+              岗位描述（JD）
+              <textarea
+                autoFocus
+                value={text}
+                maxLength={20000}
+                rows={9}
+                onChange={(e) => setText(e.target.value)}
+                placeholder="岗位名称、公司、工作职责、任职要求…"
+              />
+            </label>
+          )}
+          {importing ? <p role="status">正在提取文档…</p> : null}
           <div className="modal-actions">
             <button
               className="text-button"
+              disabled={importing}
               onClick={() =>
                 setText(
                   modal === 'jd'
@@ -1059,7 +1117,7 @@ function Workspace({
             <Button
               label={modal === 'jd' ? '生成定制草稿' : '整理为简历'}
               variant="primary"
-              isDisabled={!text.trim() || busy}
+              isDisabled={!text.trim() || busy || importing}
               icon={<Sparkles size={15} />}
               onClick={() => run(modal === 'jd' ? 'tailor' : 'import', text)}
             />

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { ConfirmDelete } from '../ConfirmDelete'
 import type { Resume } from '../../domain/resume'
+import { RichTextEditor } from './RichTextEditor'
+import { listMarkdown, markdownItems } from '../../domain/rich-text'
 export function ResumeEditor({
   resume,
   onChange,
@@ -30,29 +32,19 @@ export function ResumeEditor({
           />
         </label>
       ))}
-      <label>
-        个人简介
-        <textarea
-          rows={5}
-          value={resume.summary}
-          onChange={(e) => field('summary', e.target.value)}
-        />
-      </label>
-      <label>
-        专业技能（逗号分隔）
-        <input
-          value={resume.skills.join(', ')}
-          onChange={(e) =>
-            onChange({
-              ...resume,
-              skills: e.target.value
-                .split(/[,，]/)
-                .map((s) => s.trim())
-                .filter(Boolean),
-            })
-          }
-        />
-      </label>
+      <RichTextEditor
+        label="个人简介"
+        value={resume.summary}
+        onChange={(value) => field('summary', value)}
+      />
+      <RichTextEditor
+        label="专业技能"
+        value={listMarkdown(resume.skills)}
+        maxItems={30}
+        onChange={(value) =>
+          onChange({ ...resume, skills: markdownItems(value) })
+        }
+      />
       {resume.experience.map((job, i) => (
         <fieldset key={i}>
           <legend>工作经历 {i + 1}</legend>
@@ -72,21 +64,19 @@ export function ResumeEditor({
               />
             </label>
           ))}
-          <label>
-            工作要点（每行一条）
-            <textarea
-              rows={5}
-              value={job.bullets.join('\n')}
-              onChange={(e) =>
-                onChange({
-                  ...resume,
-                  experience: resume.experience.map((j, n) =>
-                    n === i ? { ...j, bullets: e.target.value.split('\n') } : j,
-                  ),
-                })
-              }
-            />
-          </label>
+          <RichTextEditor
+            label={`工作要点 ${i + 1}`}
+            maxItems={12}
+            value={listMarkdown(job.bullets)}
+            onChange={(value) =>
+              onChange({
+                ...resume,
+                experience: resume.experience.map((j, n) =>
+                  n === i ? { ...j, bullets: markdownItems(value) } : j,
+                ),
+              })
+            }
+          />
           <button
             className="text-button danger"
             onClick={() => setPendingDelete(i)}

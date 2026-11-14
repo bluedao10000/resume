@@ -54,8 +54,18 @@ const billingSchema = {
     (value) => Number(value) >= 1800 && Number(value) <= 86400,
   ),
 }
+const importSchema = {
+  IMPORT_MAX_FILE_BYTES: positiveInteger,
+  IMPORT_MAX_PDF_PAGES: positiveInteger,
+  IMPORT_MAX_TEXT_CHARACTERS: positiveInteger.refine(
+    (value) => Number(value) <= 20000,
+  ),
+  IMPORT_TIMEOUT_MS: positiveInteger,
+  IMPORT_MAX_EXPANDED_BYTES: positiveInteger,
+}
 const schema = z.object({
   ...billingSchema,
+  ...importSchema,
   APP_MODE: z.enum(['demo', 'live']),
   BETTER_AUTH_URL: z.url(),
   BETTER_AUTH_SECRET: z.string().min(32),
@@ -177,6 +187,9 @@ export function workerConfiguration(config) {
     }),
     vars: {
       ...Object.fromEntries(
+        Object.keys(importSchema).map((key) => [key, config[key]]),
+      ),
+      ...Object.fromEntries(
         Object.keys(billingSchema)
           .filter((key) => !secretKeys.includes(key))
           .map((key) => [key, config[key]]),
@@ -204,6 +217,12 @@ export function workerConfiguration(config) {
 
 export function configure() {
   const config = loadConfiguration()
+  for (const folder of ['cmaps', 'standard_fonts', 'wasm']) {
+    fs.cpSync(`node_modules/pdfjs-dist/${folder}`, `public/pdfjs/${folder}`, {
+      recursive: true,
+    })
+  }
+  fs.copyFileSync('node_modules/pdfjs-dist/LICENSE', 'public/pdfjs/LICENSE')
   fs.writeFileSync(
     'wrangler.jsonc',
     '// Generated from .env by scripts/configure.mjs. Do not edit.\n' +
