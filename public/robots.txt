@@ -1,0 +1,5 @@
+# Public pages may be indexed. API responses are not discovery pages.
+User-agent: *
+Disallow: /api/
+
+Sitemap: https://r.story2u.xyz/sitemap.xml

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiConfigRouteImport } from './routes/api/config'
+import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingIndexRouteImport } from './routes/api/billing/index'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
@@ -31,6 +32,11 @@ const ApiAgentRoute = ApiAgentRouteImport.update({
 const ApiConfigRoute = ApiConfigRouteImport.update({
   id: '/api/config',
   path: '/api/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiEventsRoute = ApiEventsRouteImport.update({
+  id: '/api/events',
+  path: '/api/events',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
+  '/api/events': typeof ApiEventsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
@@ -96,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/agent'
     | '/api/config'
+    | '/api/events'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/agent'
     | '/api/config'
+    | '/api/events'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/'
     | '/api/agent'
     | '/api/config'
+    | '/api/events'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
@@ -127,6 +139,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiAgentRoute: typeof ApiAgentRoute
   ApiConfigRoute: typeof ApiConfigRoute
+  ApiEventsRoute: typeof ApiEventsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
@@ -155,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/api/config'
       fullPath: '/api/config'
       preLoaderRoute: typeof ApiConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/events': {
+      id: '/api/events'
+      path: '/api/events'
+      fullPath: '/api/events'
+      preLoaderRoute: typeof ApiEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -199,6 +219,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiAgentRoute: ApiAgentRoute,
   ApiConfigRoute: ApiConfigRoute,
+  ApiEventsRoute: ApiEventsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,

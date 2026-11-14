@@ -100,6 +100,10 @@ const schema = z.object({
   CLOUDFLARE_D1_DATABASE_ID: z.uuid(),
   CLOUDFLARE_CUSTOM_DOMAIN: z.string().optional(),
   CLOUDFLARE_OBSERVABILITY_ENABLED: z.enum(['true', 'false']),
+  CLOUDFLARE_ANALYTICS_DATASET: z
+    .string()
+    .regex(/^[a-z0-9_]{1,32}$/)
+    .default('folio_events'),
 })
 
 export function parseConfiguration(values) {
@@ -166,6 +170,9 @@ export function workerConfiguration(config) {
     workers_dev: false,
     preview_urls: false,
     assets: { binding: 'ASSETS', directory: './dist/client' },
+    analytics_engine_datasets: [
+      { binding: 'ANALYTICS', dataset: config.CLOUDFLARE_ANALYTICS_DATASET },
+    ],
     d1_databases: [
       {
         binding: 'DB',

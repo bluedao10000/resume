@@ -39,7 +39,7 @@ import {
 import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
-import { LandingPage } from '../components/LandingPage'
+import { LandingPage, landingFaq } from '../components/LandingPage'
 import { BillingPanel } from '../components/BillingPanel'
 import {
   emptyResume,
@@ -63,7 +63,82 @@ import {
   removeResume,
   restoreResumeLibrary,
 } from '../domain/resume-library'
-export const Route = createFileRoute('/')({ component: Entry })
+const SITE_URL = 'https://r.story2u.xyz'
+const SITE_TITLE = 'Folio｜AI 简历修改与岗位定制，支持 PDF 导出'
+const SITE_DESCRIPTION =
+  '导入已有简历，粘贴岗位描述（JD），用对话调整经历重点。Folio 帮你保留原稿、整理独立投递版本，核对修改和待补充信息后导出 PDF。支持 PDF、DOCX 导入，提供免费 AI 额度。'
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      name: 'Folio',
+      alternateName: 'Folio AI 简历工具',
+      url: `${SITE_URL}/`,
+      inLanguage: 'zh-CN',
+      description: SITE_DESCRIPTION,
+    },
+    {
+      '@type': 'SoftwareApplication',
+      name: 'Folio',
+      applicationCategory: 'BusinessApplication',
+      operatingSystem: 'Web',
+      url: `${SITE_URL}/`,
+      inLanguage: 'zh-CN',
+      description: SITE_DESCRIPTION,
+      featureList: [
+        '对话式简历整理',
+        '按岗位描述定制简历',
+        'PDF、DOCX、TXT、Markdown、JSON 导入',
+        '简历模板与局部排版',
+        '浏览器 A4 PDF 与 JSON 导出',
+      ],
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    },
+    {
+      '@type': 'FAQPage',
+      mainEntity: landingFaq.map((item) => ({
+        '@type': 'Question',
+        name: item.question,
+        acceptedAnswer: { '@type': 'Answer', text: item.answer },
+      })),
+    },
+  ],
+}
+export const Route = createFileRoute('/')({
+  component: Entry,
+  head: () => ({
+    meta: [
+      { title: SITE_TITLE },
+      { name: 'description', content: SITE_DESCRIPTION },
+      { name: 'robots', content: 'index,follow,max-image-preview:large' },
+      { property: 'og:type', content: 'website' },
+      { property: 'og:site_name', content: 'Folio' },
+      { property: 'og:locale', content: 'zh_CN' },
+      { property: 'og:url', content: `${SITE_URL}/` },
+      { property: 'og:title', content: SITE_TITLE },
+      { property: 'og:description', content: SITE_DESCRIPTION },
+      { property: 'og:image', content: `${SITE_URL}/og.png` },
+      {
+        property: 'og:image:alt',
+        content: 'Folio：导入已有简历，按岗位定制，核对后导出 PDF',
+      },
+      { property: 'og:image:width', content: '1200' },
+      { property: 'og:image:height', content: '630' },
+      { name: 'twitter:card', content: 'summary_large_image' },
+      { name: 'twitter:title', content: SITE_TITLE },
+      { name: 'twitter:description', content: SITE_DESCRIPTION },
+      { name: 'twitter:image', content: `${SITE_URL}/og.png` },
+    ],
+    links: [{ rel: 'canonical', href: `${SITE_URL}/` }],
+    scripts: [
+      {
+        type: 'application/ld+json',
+        children: JSON.stringify(structuredData),
+      },
+    ],
+  }),
+})
 const ResumeEditor = lazy(() =>
   import('../components/resume/ResumeEditor').then((module) => ({
     default: module.ResumeEditor,
@@ -149,13 +224,18 @@ function Entry() {
     )
   if (!config || isPending)
     return (
-      <main className="entry-loading" role="status" aria-label="正在加载">
-        folio
-      </main>
+      <LandingPage
+        ready={false}
+        canLogin={false}
+        isLoading={loginBusy}
+        error={loginError}
+        onLogin={login}
+      />
     )
   if (!session && !(config.mode === 'demo' && demoOpen))
     return (
       <LandingPage
+        ready
         canLogin={config.authConfigured}
         isLoading={loginBusy}
         error={loginError}

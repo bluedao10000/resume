@@ -138,6 +138,22 @@ npm run db:generate > /tmp/folio-auth-schema.txt
 
 Wrangler 开启 observability。可通过 `npx wrangler tail` 查看 Worker 错误；禁止为排障打印简历原文、provider key、cookie 或 OAuth token。
 
+## Cloudflare 访问统计与转化埋点
+
+访问量、来源与设备由 Cloudflare Web Analytics 提供。控制台启用自动模式即可，不需要 beacon 代码；它不支持自定义事件，也不记录 UTM 查询串，因此不能用于统计按钮点击。
+
+按钮点击使用 Analytics Engine。Worker binding 为 `ANALYTICS`，dataset 默认 `folio_events`，可在 `.env` 用 `CLOUDFLARE_ANALYTICS_DATASET` 覆盖并通过 `npm run config:generate` 重新生成配置。`/api/events` 只接受 `landing_view`、`landing_login_click`、`landing_demo_click`、`landing_example_click` 与可选的最多 64 字符 `source`（读取 `utm_source` / `utm_campaign`）。只写事件名、来源和计数，不写简历、账户、IP 或设备标识；Analytics Engine 不可用时接口返回 204，不影响页面。该公开接口没有速率限制，被刷量时在 Cloudflare 加 Rate Limiting 规则或改为 Durable Object 计数。
+
+```bash
+curl -s "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/analytics_engine/sql" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+  --data "SELECT blob1 AS event, blob2 AS source, SUM(_sample_interval) AS n FROM folio_events WHERE timestamp > NOW() - INTERVAL '7' DAY GROUP BY event, source ORDER BY n DESC"
+```
+
+云平台首次写入时自动创建 dataset，无需先在控制台手工建表。SQL API token 需要 `Account Analytics Read` 权限。`_sample_interval` 用于正确统计采样后的计数。
+
+本地开发不依赖 Analytics Engine；事件以生产环境实际写入为准。Cloudflare Web Analytics 与自定义事件都不使用营销 Cookie 或第三方脚本。
+
 | 症状                      | 排查                                                                  |
 | ------------------------- | --------------------------------------------------------------------- |
 | Google OAuth 待配置       | `/api/config` authConfigured；secret 是否存在；重启进程               |

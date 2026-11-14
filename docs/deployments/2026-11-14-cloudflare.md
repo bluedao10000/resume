@@ -285,3 +285,18 @@ TypeScript、受影响文件格式检查、4 项模板浏览器回归及生产�
 - 生产首页、`/api/config` 与匿名 `/api/auth/get-session` 均为 HTTP 200；公开配置为 live / pi-durable，Google 配置有效，匿名会话为 null。
 - 生产新增两项浏览器测试通过，覆盖三入口、打开/取消不生成、不改简历、修改示例不覆盖输入、发送后收起、刷新不重放、新对话恢复引导、空库禁用与手机/短屏布局。使用隔离的合成示例和模拟认证/Agent，未访问真实用户数据或调用模型；不代表重新实测完整 Google OAuth 授权。
 - Worker 上传 gzip 约 2360 KiB，启动 17ms。测试端口 5173 已关闭，临时测试服务已退出。
+
+## 同日发布：公开首页与 SEO/GEO
+
+发布版本：`39e5043c-c94a-46b5-96fc-aa702e61d4c1`，部署至 https://r.story2u.xyz/，继续使用 live / pi-durable。按用户要求从当前工作区构建发布，尚未提交这些改动。本次无数据库迁移、环境参数或模型调用变更；发布前版本为 `56e5d0c5-33a8-48c3-b8fe-f0a75bb7987b`。
+
+未登录首页聚焦已有简历按岗位定制，加入明确标注的静态虚构示例、三步流程、免费额度和数据处理说明。正文服务端渲染，增加 canonical、Open Graph/Twitter、WebSite/SoftwareApplication/FAQPage JSON-LD，以及 robots.txt、sitemap.xml、llms.txt 和 1200×630 分享图。示例沿用 ResumeDocument，不调用 Agent、不初始化本地简历库。
+
+验证：
+
+- 本地类型检查、格式检查、4 项配置测试、53 项领域/服务端测试、全量 58 项浏览器回归和生产构建通过；真实模型 opt-in 未运行。首次浏览器回归的 DOCX 加载遇 Vite 依赖优化重载，单独及全量重跑通过。
+- 构建产物的 SSR、结构化数据、robots 规则、站点地图、llms 文本和分享图检查通过；部署 dry-run 和正式发布成功，Worker 上传 gzip 约 2360.58 KiB，启动 17ms。
+- 生产浏览器请求首页及上述四个静态资源均为 HTTP 200；原始 HTML 包含新正文，canonical 指向正式域名，JSON-LD 可解析，分享图为 PNG、1200×630。robots 允许公开页面并排除 `/api/`。
+- 生产 `/api/config` 为 live / pi-durable、authConfigured=true，匿名会话为 null。静态示例点击可到达，登录按钮可用，公开页 localStorage 为空，控制台无警告或错误；没有重新执行完整 Google OAuth 或真实 AI 调用。
+- 独立 curl 首页请求 HTTP 200；Python urllib 默认客户端请求遇 HTTP 403，未将该客户端检查计为通过。不代表所有爬虫已获准访问，也未验证搜索引擎收录、排名或 AI 引用。
+- 本地验证后开发与预览服务已停止，5173 和 4173 端口已释放。

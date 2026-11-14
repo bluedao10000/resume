@@ -377,6 +377,43 @@ test('对话独享全屏高度，长消息独立滚动，工具菜单不挤占�
   await expect(page.locator('.user-message')).toHaveCount(0)
 })
 
+test('公开首页的正文和 SEO 资源不依赖客户端 JavaScript', async ({
+  request,
+}) => {
+  const response = await request.get('/')
+  expect(response.status()).toBe(200)
+  const html = await response.text()
+  expect(html).toContain('把已有简历，')
+  expect(html).toContain('改成适合目标岗位的投递版本')
+  expect(html).toContain('虚构案例 · 非实时生成')
+  expect(html).toContain('开始定制简历')
+  expect(html).toContain('首页只记录匿名的访问与按钮点击次数')
+  expect(html).toContain('删除浏览器内的简历不会同时删除这些服务端记录')
+  expect(html).toContain('rel="canonical" href="https://r.story2u.xyz/"')
+  expect(html).toContain('property="og:image"')
+  expect(html).toContain('application/ld+json')
+  for (const [path, content] of [
+    ['/robots.txt', 'Disallow: /api/'],
+    ['/sitemap.xml', '<loc>https://r.story2u.xyz/</loc>'],
+    ['/llms.txt', 'AI 仍可能出错'],
+  ]) {
+    const asset = await request.get(path)
+    expect(asset.status()).toBe(200)
+    expect(await asset.text()).toContain(content)
+  }
+  const image = await request.get('/og.png')
+  expect(image.status()).toBe(200)
+  expect(image.headers()['content-type']).toContain('image/png')
+  const event = await request.post('/api/events', {
+    data: { event: 'landing_login_click', source: 'test' },
+  })
+  expect(event.status()).toBe(204)
+  const invalidEvent = await request.post('/api/events', {
+    data: { event: 'unknown' },
+  })
+  expect(invalidEvent.status()).toBe(400)
+})
+
 test('未登录展示独立落地页，Google 登录失败可重试且不访问简历库', async ({
   page,
 }) => {
@@ -392,17 +429,36 @@ test('未登录展示独立落地页，Google 登录失败可重试且不访问�
     })
   })
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: '简历工作台' })).toBeVisible()
+  await expect(
+    page.getByRole('heading', {
+      name: /把已有简历，.*改成适合目标岗位的投递版本/,
+    }),
+  ).toBeVisible()
   await expect(page.locator('.app-shell')).toHaveCount(0)
   await expect(page.getByRole('button', { name: '试用示例' })).toHaveCount(0)
   expect(
     await page.evaluate(() => localStorage.getItem('folio:resumes:v1:guest')),
   ).toBeNull()
-  await page.getByRole('button', { name: '使用 Google 继续' }).click()
+  await page
+    .locator('.landing-intro')
+    .getByRole('button', { name: '开始定制简历' })
+    .click()
   await expect(page.getByRole('alert')).toContainText('登录暂不可用')
-  await page.getByRole('button', { name: '使用 Google 继续' }).click()
+  await page
+    .locator('.landing-intro')
+    .getByRole('button', { name: '开始定制简历' })
+    .click()
   expect(attempts).toHaveLength(2)
   expect(attempts[0]).toMatchObject({ provider: 'google', callbackURL: '/' })
+  await page.getByRole('link', { name: '查看定制示例', exact: true }).click()
+  await expect(
+    page.getByRole('heading', { name: '一份基础简历，怎样投设计系统岗位？' }),
+  ).toBeInViewport()
+  await expect(
+    page.locator('.landing-document .resume-job').first().locator('li').first(),
+  ).toHaveText(
+    '从 0 到 1 搭建产品设计系统，统一多端组件规范，提升团队协作效率。',
+  )
   await page.setViewportSize({ width: 390, height: 844 })
   expect(
     await page.evaluate(
