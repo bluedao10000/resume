@@ -75,12 +75,6 @@ export function ResumeDocument({ resume }: { resume: Resume }) {
         </div>
       ) : null}
       {sectionOrder(resume).map((id) => sections[id])}
-      <footer className="resume-footer">
-        <span>
-          {resume.name} / {resume.title}
-        </span>
-        <span>01</span>
-      </footer>
     </article>
   )
 }

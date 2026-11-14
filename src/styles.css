@@ -1353,16 +1353,6 @@ summary {
   color: #909b7f;
   border-radius: 2px;
 }
-.resume-footer {
-  margin-top: 30px;
-  padding-top: 12px;
-  border-top: 1px solid #edf0e6;
-  display: flex;
-  justify-content: space-between;
-  color: #b5bbaa;
-  font-size: 7px;
-  letter-spacing: 1px;
-}
 .minimal {
   color: #252b2b;
   background: #fff;
@@ -1963,9 +1953,6 @@ summary {
   }
   .print-only .resume-skills > .resume-skill {
     font-size: 11px;
-  }
-  .print-only .resume-footer {
-    font-size: 9px;
   }
   .print-only .resume-paper[data-density='compact'] .resume-section {
     margin-top: 18px;
