@@ -81,6 +81,118 @@ test('移动章节实际改变两种模板与打印顺序，刷新恢复对话�
   expect(calls).toBe(1)
 })
 
+test('JD 定制入口直接可见，取消不生成，确认保留来源且刷新不重放', async ({
+  page,
+}) => {
+  const { sampleResume } = await import('../src/domain/resume')
+  await page.addInitScript(
+    (resume) => {
+      if (!localStorage.getItem('folio:resumes:v1:guest'))
+        localStorage.setItem('folio:resumes:v1:guest', JSON.stringify([resume]))
+    },
+    { ...sampleResume, isExample: false, label: '基础简历' },
+  )
+  const requests: ReturnType<typeof AgentRequestSchema.parse>[] = []
+  await page.route('**/api/agent', (route) => {
+    const input = AgentRequestSchema.parse(route.request().postDataJSON())
+    requests.push(input)
+    return route.fulfill({ json: demoAgent(input) })
+  })
+  await openWorkspace(page)
+  const source = await page.evaluate(
+    () => JSON.parse(localStorage.getItem('folio:resumes:v1:guest')!)[0],
+  )
+  const entry = page.getByRole('button', { name: '按 JD 定制', exact: true })
+  const composer = page.getByRole('textbox', { name: '发送给 Folio' })
+  await expect(entry).toBeVisible()
+  await expect(composer).toHaveAttribute('placeholder', /岗位描述（JD）/)
+  await composer.fill('尚未发送的修改要求')
+  await entry.click()
+  const dialog = page.getByRole('dialog', { name: '按岗位定制', exact: true })
+  await expect(dialog).toContainText('生成独立版本，保留原简历')
+  await expect(
+    dialog.getByRole('button', { name: '生成定制草稿' }),
+  ).toBeDisabled()
+  await page.keyboard.press('Escape')
+  await expect(entry).toBeFocused()
+  await expect(composer).toHaveValue('尚未发送的修改要求')
+  expect(requests).toHaveLength(0)
+  await expect(page.locator('.nav-count')).toHaveText('1')
+  await entry.click()
+  await dialog
+    .getByLabel('岗位描述（JD）')
+    .fill('前端工程师\nReact / TypeScript\n投递邮箱：talent@example.invalid')
+  await dialog.getByRole('button', { name: '生成定制草稿' }).click()
+  await expect(page.locator('.nav-count')).toHaveText('2')
+  expect(requests).toHaveLength(1)
+  expect(requests[0].intent).toBe('tailor')
+  expect(requests[0].library?.[0].id).toBe(source.id)
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('folio:resumes:v1:guest')!),
+  )
+  expect(
+    saved.find((resume: { id: string }) => resume.id === source.id),
+  ).toEqual(source)
+  expect(saved[0].id).not.toBe(source.id)
+  await page.reload()
+  await expect(page.locator('.nav-count')).toHaveText('2')
+  await expect(entry).toBeVisible()
+  expect(requests).toHaveLength(1)
+})
+
+test('手机 JD 入口不挤出发送按钮或增加对话顶部占用，生成时禁用', async ({
+  page,
+}) => {
+  let finish!: () => void
+  const gate = new Promise<void>((resolve) => {
+    finish = resolve
+  })
+  await page.route('**/api/agent', async (route) => {
+    await gate
+    return route.fulfill({
+      json: demoAgent(AgentRequestSchema.parse(route.request().postDataJSON())),
+    })
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await openWorkspace(page)
+  const entry = page.getByRole('button', { name: '按 JD 定制', exact: true })
+  await expect(entry).toBeInViewport()
+  await expect(page.getByRole('button', { name: '发送消息' })).toBeInViewport()
+  const bounds = await page.locator('.chat-scroll').boundingBox()
+  expect(bounds?.y).toBe(0)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true)
+  await entry.click()
+  await page
+    .getByLabel('岗位描述（JD）')
+    .fill('前端工程师\n任职要求：React、TypeScript')
+  await page.getByRole('button', { name: '生成定制草稿' }).click()
+  await expect(entry).toBeDisabled()
+  await expect(page.getByRole('button', { name: '停止生成' })).toBeInViewport()
+  finish()
+  await expect(entry).toBeEnabled()
+  await expect(page.locator('.nav-count')).toHaveText('2')
+})
+
+test('空库先引导导入，已有简历后显示 JD 定制入口', async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem('folio:resumes:v1:guest'))
+      localStorage.setItem('folio:resumes:v1:guest', '[]')
+  })
+  await openWorkspace(page)
+  const entry = page.getByRole('button', { name: '按 JD 定制', exact: true })
+  await expect(entry).toHaveCount(0)
+  await expect(page.locator('.import-prompt')).toBeVisible()
+  await page.locator('.import-prompt').click()
+  await page.getByRole('button', { name: '填入示例' }).click()
+  await page.getByRole('button', { name: '整理为简历' }).click()
+  await expect(entry).toBeVisible()
+  await expect(page.locator('.nav-count')).toHaveText('1')
+})
+
 test('刷新后携带历史上下文，新对话隔离上下文且旧对话可再次打开', async ({
   page,
 }) => {

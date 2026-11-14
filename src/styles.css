@@ -687,9 +687,30 @@ summary {
 .composer-actions button:hover {
   background: #f1f2f4;
 }
-.enter-hint {
-  color: var(--muted);
+.composer-jd {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: none;
+  color: var(--ink);
   font-size: 11px;
+  white-space: nowrap;
+}
+.composer-jd:hover:not(:disabled) {
+  background: var(--sidebar);
+}
+.composer-jd:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.composer-jd:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .send-button {
   display: grid;
@@ -1773,9 +1794,6 @@ summary {
   }
   .composer-container {
     padding: 12px 14px 16px;
-  }
-  .enter-hint {
-    display: none;
   }
   .preview-toolbar {
     min-height: 46px;

@@ -15,6 +15,8 @@ npm run dev
 
 默认地址 `http://localhost:5173`，若端口占用 Vite 会另选端口；OAuth 本地回调地址必须一致。开发服务器使用 Cloudflare Vite 插件的 Workers 环境，不需要自建 Node 后端。
 
+本地验证结束后关闭本次启动的开发/预览服务，并确认其监听端口已释放；不要留下后台 `npm run dev`。优先让 Playwright 管理测试服务的启动与关闭；如复用手动启动的服务，测试结束后也需关闭本项目服务及其遗留子进程。不要终止其他项目的进程。
+
 默认 `APP_MODE=demo`、Google 凭据为空，可直接演示。要配置本地服务：
 
 ```bash

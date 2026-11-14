@@ -10,6 +10,14 @@ import {
   sampleResume,
 } from './resume'
 describe('事实约束与版本隔离', () => {
+  it('显式 JD 定制不因招聘联系邮箱而误判为导入简历', () => {
+    expect(
+      inferIntent(
+        '前端工程师\nReact / TypeScript\n投递邮箱：talent@example.invalid',
+        'tailor',
+      ),
+    ).toBe('tailor')
+  })
   it('润色保留当前身份且不修改输入、不添加数字', () => {
     const original = structuredClone(sampleResume)
     const result = demoAgent({

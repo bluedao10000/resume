@@ -11,6 +11,7 @@ React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is t
 ## Commands
 
 - `npm ci`; `npm run dev`
+- After local verification, stop this project's dev/preview servers and confirm their listening ports are closed. Do not leave a background server running or stop unrelated projects.
 - `npm run check`; `npm test`; `npm run test:e2e`; `npm run build`
 - E2E uses headless installed Google Chrome; configure Playwright for Chromium if unavailable.
 - `npm run astryx -- component Button` and `npm run astryx -- component <Name>` for current UI APIs. Do not guess Astryx props.
@@ -42,7 +43,7 @@ React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is t
 - Demo is deterministic and visibly labelled; live requires a session and configured server-side provider.
 - Update product/harness docs with behavior changes; report external integration validation honestly.
 - Keep UI task-focused: no slogans, decorative status labels or repeated instructions. Preserve semantic controls, visible factual gaps and example labels. Apply the UX/DX/AX contract in `docs/product/interface.md`.
-- The conversation owns full viewport height: no shared page header, toolbar or source card above messages. Keep tools in the composer popover and mobile preview/account navigation in the sidebar. Verify long-message scrolling and composer visibility.
+- The conversation owns full viewport height: no shared page header, toolbar or source card above messages. Keep secondary tools in the composer popover; expose JD tailoring in the existing composer bottom row when a resume exists. Keep mobile preview/account navigation in the sidebar. Verify long-message scrolling and composer visibility.
 
 - Section layout is data (`sectionOrder`), shared by preview/templates/print. Success messages must follow verified tool results, not model claims.
 - Template IDs/defaults live in domain/resume-presentation.ts. Optional presentation stores per-resume summary/skills/bullets/density, never transforms facts. resume_set_presentation is the shared validated layout tool; ordinary resume_update must preserve presentation. See docs/architecture/resume-presentation.md.

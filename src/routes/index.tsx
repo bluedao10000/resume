@@ -760,6 +760,7 @@ function Workspace({
                   }
                   resume={resume}
                   hasResume={hasResume}
+                  busy={busy}
                   library={resumes}
                   intent={intent}
                   onResult={onResult}
@@ -1124,17 +1125,22 @@ function Workspace({
               />
             </Suspense>
           ) : (
-            <label className="modal-input-label">
-              岗位描述（JD）
-              <textarea
-                autoFocus
-                value={text}
-                maxLength={20000}
-                rows={9}
-                onChange={(e) => setText(e.target.value)}
-                placeholder="岗位名称、公司、工作职责、任职要求…"
-              />
-            </label>
+            <>
+              <p className="modal-description">
+                基于 {resume.name} 的简历库生成独立版本，保留原简历。
+              </p>
+              <label className="modal-input-label">
+                岗位描述（JD）
+                <textarea
+                  autoFocus
+                  value={text}
+                  maxLength={20000}
+                  rows={9}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="岗位名称、公司、工作职责、任职要求…"
+                />
+              </label>
+            </>
           )}
           {importing ? <p role="status">正在提取文档…</p> : null}
           <div className="modal-actions">

@@ -206,7 +206,9 @@ export function matchJD(resume: Resume, jd: string) {
 export function inferIntent(
   text: string,
   fallback: 'polish' | 'tailor' | 'import',
-) {
+): 'polish' | 'tailor' | 'import' {
+  // The explicit JD action wins over incidental contact emails in a job post.
+  if (fallback === 'tailor') return 'tailor'
   if (/岗位职责|任职要求|工作职责|job description|\bJD\b/i.test(text))
     return 'tailor'
   if (text.includes('\n') && /我的简历[：:]|以下是我的简历/.test(text))

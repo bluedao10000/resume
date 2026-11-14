@@ -42,6 +42,7 @@ type Props = {
   onRequest: (request: z.infer<typeof AgentRequestSchema> | null) => void
   resume: Resume
   hasResume: boolean
+  busy: boolean
   library: Resume[]
   intent: Intent
   onResult: (r: AgentResult) => void
@@ -299,7 +300,7 @@ export function AgentChat(props: Props) {
                   ? '粘贴岗位描述…'
                   : props.intent === 'import'
                     ? '粘贴你的简历或经历…'
-                    : '输入修改要求…'
+                    : '输入修改要求，或粘贴岗位描述（JD）…'
               }
               rows={2}
               maxLength={20000}
@@ -384,7 +385,16 @@ export function AgentChat(props: Props) {
                 ) : null}
               </div>
               <div>
-                <span className="enter-hint">Enter 发送</span>
+                {props.hasResume ? (
+                  <button
+                    type="button"
+                    className="composer-jd"
+                    onClick={props.onJD}
+                    disabled={props.busy}
+                  >
+                    <Target size={14} aria-hidden="true" />按 JD 定制
+                  </button>
+                ) : null}
                 <ThreadPrimitive.If running={false}>
                   <ComposerPrimitive.Send
                     className="send-button"
