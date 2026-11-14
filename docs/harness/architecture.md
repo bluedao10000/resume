@@ -26,7 +26,7 @@ flowchart LR
   OAuth --> D1[(Cloudflare D1 认证表)]
 ```
 
-Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存 user、session、account、verification。当前简历与完整 UI 对话保存在浏览器，不写 D1。pi-durable 另在 DO SQLite 保存每轮输入、transcript、tasks 和工具结果。演示请求不在服务端保存。真实模型只在 Worker 读取密钥。
+Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证表、计费账本与订阅，以及 pi-ai 最终结果缓存。简历库与完整 UI 对话仍在浏览器，未实现云端同步。pi-durable 另在 DO SQLite 保存每轮输入、transcript、tasks 和工具结果。演示请求不在服务端保存。真实模型只在 Worker 读取密钥。
 
 首页的 Entry 统一加载公开配置与 Better Auth session，再选择 LandingPage 或 Workspace。工作台按身份 key 挂载，退出后卸载；落地页不初始化简历数据。demo 只有明确点击试用才打开 guest 工作台；live 不提供绕过登录的访客工作台。配置失败不隐式降级。
 
@@ -104,3 +104,7 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存 user�
 - `AI_API` 选择 pi 官方 Responses / Chat Completions adapter。当前模型实测需要 Responses + low reasoning 才能调用函数工具。
 - 本机持久化有容量与共享设备边界，生产云端存储落地前不承诺跨设备恢复。
 - Astryx 与 assistant-ui 的依赖会带来较大首包；生产需按功能拆分、评估样式裁剪与实际性能预算。
+
+## 计费边界
+
+`domain/billing.ts` 定义整数费率与用量，`server/billing.ts` 管理 D1 原子预留与结算；pi adapter fetch 边界执行预算检查，durable DO 从持久化 transcript 结算。Stripe 独立维护订阅权益，不访问简历组件。完整流程见 [计费架构与恢复](../architecture/billing.md)。

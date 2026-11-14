@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
+import { plans } from '../../server/billing'
 export const Route = createFileRoute('/api/config')({
   server: {
     handlers: {
@@ -7,6 +8,7 @@ export const Route = createFileRoute('/api/config')({
         const config = env as unknown as Record<string, string>
         return Response.json({
           mode: config.APP_MODE === 'live' ? 'live' : 'demo',
+          billingPlans: plans(config),
           runtime:
             config.AGENT_RUNTIME === 'pi-durable' ? 'pi-durable' : 'pi-ai',
           authConfigured: Boolean(

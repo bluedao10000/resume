@@ -12,6 +12,8 @@ test('generated configuration excludes credentials and declares allowed secrets'
     AI_API_KEY: 'model-secret-fixture',
     CLOUDFLARE_API_TOKEN: 'cf-secret-fixture',
     GOOGLE_CLIENT_SECRET: 'google-secret-fixture',
+    STRIPE_SECRET_KEY: 'stripe-secret-fixture',
+    STRIPE_WEBHOOK_SECRET: 'webhook-secret-fixture',
   })
   const worker = workerConfiguration(config)
   const serialized = JSON.stringify(worker)
@@ -20,9 +22,12 @@ test('generated configuration excludes credentials and declares allowed secrets'
     'BETTER_AUTH_SECRET',
     'GOOGLE_CLIENT_SECRET',
     'CLOUDFLARE_API_TOKEN',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
   ])
     assert.ok(!serialized.includes(config[key]))
   assert.ok(worker.secrets.required.includes('AI_API_KEY'))
+  assert.ok(worker.secrets.required.includes('STRIPE_SECRET_KEY'))
   assert.ok(!worker.secrets.required.includes('CLOUDFLARE_API_TOKEN'))
   assert.equal(worker.main, './src/worker.ts')
   assert.deepEqual(worker.durable_objects.bindings, [
@@ -41,11 +46,18 @@ test('Agent runtime, protocol and positive limits are validated before deploymen
     { AI_MAX_OUTPUT_TOKENS: '-1' },
     { AI_CONTEXT_WINDOW: 'NaN' },
     { AI_REASONING_EFFORT: 'none' },
+    { BILLING_FREE_CREDITS: '-1' },
+    { BILLING_INPUT_CREDITS_PER_MILLION: 'NaN' },
+    { BILLING_PLUS_MONTHLY_CENTS: '999' },
   ])
     assert.throws(
       () => parseConfiguration({ ...example, ...override }),
       /Invalid .env fields/,
     )
+  assert.throws(
+    () => parseConfiguration({ ...example, STRIPE_SYNC_LOCK_MS: '1' }),
+    /sync lease/,
+  )
 })
 
 test('live mode fails without model and authentication configuration', () => {

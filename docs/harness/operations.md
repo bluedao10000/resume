@@ -2,7 +2,7 @@
 
 更新：2026-11-14。所有命令从仓库根目录运行。
 
-本手册描述当前已实现的运行方式。`.env` 唯一配置入口、D1 认证存储、Worker Secrets 同步和自定义域名部署已实现；[技术架构设计](../architecture/technical-architecture.md) 中的 pi 双运行时已实施，云端简历/对话同步仍待实施。
+本手册描述当前已实现的运行方式。`.env` 唯一配置入口、D1 认证与计费存储、Worker Secrets 同步和自定义域名部署已实现；[技术架构设计](../architecture/technical-architecture.md) 中的 pi 双运行时已实施，云端简历/对话同步仍待实施。
 
 ## 本地开发
 
@@ -75,7 +75,7 @@ npm run config:generate
 
 `AGENT_TIMEOUT_MS` 控制单次 provider stream 超时（当前 45,000ms），`AI_CONTEXT_WINDOW` / `AI_MAX_OUTPUT_TOKENS` 声明上下文与输出上限，`AI_MODEL_REASONING` 声明模型能力，`AI_REASONING_EFFORT` 设置推理级别。模型失败或无效工具不更新原稿。轻量 API 返回安全错误与参考编号，durable 失败快照返回安全说明；日志不写入密钥、简历或供应商原始响应。
 
-DO 使用 `ResumeAgentSession` 类和官方 `openDurableObjectSqliteStorage`。构造时预置 alarm，打开 Harness 后根据 `onWake` / `wake()` 设置最早唤醒或一分钟活动心跳，alarm 中先重设再 resume。任务空闲才删除 alarm。部署新增 SQLite class migration `resume-agent-v1`，由生成的 Wrangler 配置管理；没有新的 D1 业务迁移。每轮 actor 会保留执行数据，当前没有自动过期/服务端删除入口。
+DO 使用 `ResumeAgentSession` 类和官方 `openDurableObjectSqliteStorage`。构造时预置 alarm，打开 Harness 后根据 `onWake` / `wake()` 设置最早唤醒或一分钟活动心跳，alarm 中先重设再 resume。任务空闲才删除 alarm。部署新增 SQLite class migration `resume-agent-v1`，由生成的 Wrangler 配置管理；计费另需 `0002_billing.sql` 迁移。每轮 actor 会保留执行数据，当前没有自动过期/服务端删除入口。
 
 本机完整对话保存在 `folio:chats:v1:<guest|userId>`。清理浏览器存储会丢失 UI 历史；目前 JSON 仅备份简历。DO 记录不是跨设备完整聊天档案。退出登录保留本机分区，损坏数据不自动覆盖；历史版本未存储的对话无法恢复。
 
@@ -106,7 +106,7 @@ Cloudflare Vite 插件生成 `dist/server/wrangler.json`，内含 Worker 入口�
 
 ## 数据库迁移
 
-`0001_better_auth.sql` 由安装版本的 Better Auth `getMigrations` 生成，已在本地 D1 执行。当前只包含认证表与索引。
+`0001_better_auth.sql` 由安装版本的 Better Auth `getMigrations` 生成，已在本地 D1 执行。该迁移包含认证表与索引；`0002_billing.sql` 另建计费表。
 
 ```bash
 npm run db:generate > /tmp/folio-auth-schema.txt
@@ -145,3 +145,38 @@ Wrangler 开启 observability。可通过 `npx wrangler tail` 查看 Worker 错�
 ## 后续运营工作
 
 云端简历存储落地后需要账户数据导出/删除、备份恢复与访问审计。Agent 工具化后记录匿名 runId、延迟、token 和事实校验状态，并为超预算、持续 5xx、认证失败建立告警。当前没有假装这些设施已存在。
+
+## Stripe 支付开通
+
+计费首版默认启用 Free 额度。支付尚未配置时，Plus / Pro 展示月价但禁止结账。所有参数均填写项目根目录 `.env`，不要把 secret 放在 Vite 客户端变量、Git 或文档中。
+
+1. 在 Stripe 商户后台先使用测试模式创建两个 USD 月 recurring price，分别 **$10 / 月**、**$50 / 月**，数量固定 1，不使用试用期、优惠券或自定义价格。
+2. 将 secret key 写入 `STRIPE_SECRET_KEY`，两个 price ID 写入 `STRIPE_PLUS_PRICE_ID` 和 `STRIPE_PRO_PRICE_ID`。测试和正式模式不能混用。
+3. 创建 webhook endpoint `https://r.story2u.xyz/api/billing/webhook`，选 API 版本 `2025-03-31.basil`；订阅 `invoice.paid`、`invoice.payment_failed`、`customer.subscription.updated`、`customer.subscription.deleted`、`checkout.session.completed`。签名 secret 写入 `STRIPE_WEBHOOK_SECRET`。
+4. 配置 Customer Portal，至少支持查看账单和取消订阅。可把专用 portal configuration ID 写入 `STRIPE_PORTAL_CONFIGURATION_ID`。默认先不开启即时套餐切换；如开启需明确按比例收款和权益周期规则，避免同周期反复切换造成争议。
+5. 检查 `BILLING_*` 配额与费率，确保 `BILLING_MODEL=AI_MODEL`，更改费率时更新版本。`STRIPE_API_BASE_URL`、版本、超时、签名容差、结账有效期与同步锁有效期均在 `.env`，生产使用官方 HTTPS 地址。
+6. 执行 `npm run config:generate`、本地验证及远端迁移后 `npm run deploy`。脚本只同步允许的 Stripe secret，不向静态资源写密钥。
+
+正式开放前用测试商户实际验证：Free → Plus / Pro 付款 → webhook 开通 → 余额及真实用量；重复 webhook；支付失败不升级；取消续费本期仍有效；到期或欠费回到 Free；Portal 返回；中途取消 Checkout；两个标签页同时购买。模拟测试通过不等于上述真实支付已验证。测试数据验证后再切换正式模式的全部 key、price、webhook 和 portal 配置。
+
+```bash
+npm run db:migrate:local
+npm run check
+npm test
+npm run test:e2e
+npm run db:migrate:remote
+npm run deploy
+```
+
+`cf-bluedao` 在交互 shell 中提供 Cloudflare 凭据；可使用 `zsh -ic 'eval "${aliases[cf-bluedao]}"; npm run db:migrate:remote'` 和对应 deploy 命令。不要输出凭据。先确认迁移成功再部署依赖新表的代码。
+
+## 计费排障与数据边界
+
+- `/api/billing/` 返回本人套餐和 no-store 摘要；401 检查登录，503 检查模型费率匹配、迁移与配置。签名 webhook 失败返回 5xx，由 Stripe 重试，不能手工把浏览器 `billing=success` 当付款凭证。
+- 先查 Stripe authoritative subscription、invoice paid 状态、customer 与 `metadata.folio_user_id`、price、item 周期，再查 D1 `billing_subscriptions`。不认识的价格和多份有效订阅需要人工对账，不得简单赋予 Pro。
+- `billing_runs.status='reserved'` 占用余额与并发。DO 活动任务由 alarm / wake / GET 重试结算。异常旧预留先核对运行终态与 provider usage；轻量进程崩溃及 D1→DO 交接故障没有自动回收，不得仅因时间较久便释放仍活动的请求。
+- 确认从未发送供应商请求、或终态且没有报告用量后，才可由运维对精确 user/run 以 `WHERE status='reserved'` 条件释放。已有有效 usage 时按该 run 的 `tariff_json` 结算；若超出预留，先查明协议与计价边界，不能以预估 Token 替代实际账单。当前没有后台对账按钮或自动退款流程。
+- Stripe 网络超时可能已经创建 Checkout，因此保留待完成锁到过期。没有 session ID 的不确定结账不能直接取消重开。完成的支付需等待 webhook，不能再买一份；同订阅回调锁冲突交给 Stripe 重试。
+- D1 新增计费与 pi-ai 最终结果缓存，其中可能含简历输出；完整简历库和 UI 历史仍是本机数据。DO 保留任务 transcript。清理本机站点不会清理这些服务端记录。账户删除和隐私导出尚待统一实现。
+- 配额变更影响当前按配置计算的 allowance；费率快照不追溯修改已有 run。生产调整须评估在途预留和用户权益，不随意改低正在使用的额度。账本记录暂未自动过期。
+- 退款与拒付尚未自动撤销权益，必须由运营核对并处理；启用真实支付前配置税务、账单支持与退款政策。

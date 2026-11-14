@@ -14,6 +14,7 @@ import {
 import { z } from 'zod'
 import { AgentRequestSchema, AgentResultSchema } from '../domain/resume'
 import { createResumeModels } from './pi-models'
+import type { TokenUsage } from '../domain/billing'
 import {
   agentInstructions,
   agentPrompt,
@@ -38,8 +39,9 @@ export async function openResumeHarness(
   config: Record<string, string>,
   onWake?: (wake: Wake) => void,
   fetchModel?: typeof fetch,
+  preparePayload?: (payload: unknown) => Promise<unknown>,
 ) {
-  const { models } = createResumeModels(config, fetchModel)
+  const { models } = createResumeModels(config, fetchModel, preparePayload)
   const registry = createRegistry()
   const tools = resumeTools.map((tool) =>
     defineTool({
@@ -167,4 +169,20 @@ export async function resumeTurnSnapshot(harness: Harness) {
     status: 'failed' as const,
     error: 'Agent 未能完成有效操作，当前简历已保留。',
   }
+}
+export async function resumeTurnUsage(harness: Harness): Promise<TokenUsage> {
+  const root = await harness.root(context)
+  const view = await root.context(context)
+  return view.messages.reduce<TokenUsage>(
+    (usage, message) => {
+      if (message.role === 'assistant') {
+        usage.input += message.usage.input
+        usage.output += message.usage.output
+        usage.cacheRead += message.usage.cacheRead
+        usage.cacheWrite += message.usage.cacheWrite
+      }
+      return usage
+    },
+    { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+  )
 }

@@ -8,7 +8,7 @@
 | ----------- | ------------------------------------------------ |
 | 访问地址    | `https://r.story2u.xyz`                          |
 | Worker      | `folio-resume-agent`                             |
-| Worker 版本 | `76147137-f46c-4292-9042-d7eb407cf7b4`           |
+| Worker 版本 | `4d511346-eaa4-409f-af81-e8146d8a5fd7`           |
 | D1 名称     | `folio`                                          |
 | D1 ID       | `edd94c24-ba7f-4161-a8bf-6fcfaa5a50f8`           |
 | D1 binding  | `DB`                                             |
@@ -194,3 +194,18 @@ TypeScript 与生产构建通过。本地及生产域名各 7 项相关浏览器
 - 生产创建专用短期测试 user/session，使用 Better Auth 相同签名访问实际浏览器工作台。真实 Worker → DO SQLite → provider 完成章节移动，预览改变；刷新保留消息；下一轮问答记住之前的章节要求；简历数量保持 1。重复 POST 复用完成结果，同 requestId 不同正文返回 409，无 pageerror。
 - 生产测试结束已删除专用 session/user，并查询确认清理；未读取或修改用户已有简历。DO 保留虚构测试轮次的执行记录。该检查不代表重新完成 Google 账号授权或模拟了 Cloudflare 实例强制回收。
 - 发布上传 gzip 约 1,581 KiB，Worker 启动约 15ms；前端大 chunk 警告仍存在。
+
+## 同日发布：三档套餐与 Token 账本
+
+发布版本：`4d511346-eaa4-409f-af81-e8146d8a5fd7`。已在原域名部署，远端 `0002_billing.sql` 成功执行。Free $0 / Plus $10 / Pro $50 月价与 10 / 125 / 625 credits 配额集中在 `.env`；D1 新增服务端计费账本和订阅信息。计费规则与官方参考见 [套餐文档](../product/billing.md)，恢复与支付配置见 [运维手册](../harness/operations.md#stripe-支付开通)。
+
+验证：
+
+- TypeScript、格式检查、43 项领域/服务端测试、4 项配置测试通过，1 项需要真实 provider 的常规 opt-in 测试跳过。生产构建和发布成功。
+- 本地及生产域名各 33 项浏览器回归通过。浏览器使用隔离的 auth/model fixture；新增价格、用量、支付回跳不升级、支付失败不改变套餐、额度不足保留简历、手机布局及读取失败重试检查。
+- 独立生产真实调用：临时专用 user/session → Worker → native pi-durable DO → gpt-6.1-sol，完成章节工具。供应商报告输入 748、输出 29、缓存 0，服务端结算 **0.04465 credits**，预留归零。
+- 重发同一请求复用持久化结果，分类 Token 与已扣额度不变，D1 仅一条 settled run。支付未配置时 Checkout 返回 503，错误 JSON 返回 400。
+- 已删除临时 user/session，级联清理账本并确认剩余 0 行；DO 保留该虚构测试轮次的执行记录，没有操作真实用户简历。
+- Stripe 当前没有 secret / price / webhook 配置，`paymentConfigured=false`；真实结账、扣款、取消和续费尚未验证。对应代码经模拟测试，不宣称在线支付已开通。
+
+本次构建上传 gzip 约 1,592 KiB，Worker 启动约 29ms。前端大 chunk 警告仍存在。全量简历和 UI 对话仍为本机存储；D1 的 pi-ai 结果缓存不是完整云端简历库。

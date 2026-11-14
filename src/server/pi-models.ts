@@ -6,6 +6,7 @@ import type { Model, ThinkingLevel } from '@earendil-works/pi-ai'
 export function createResumeModels(
   config: Record<string, string>,
   fetchModel?: typeof fetch,
+  preparePayload?: (payload: unknown) => Promise<unknown>,
 ) {
   const model: Model<'openai-completions' | 'openai-responses'> = {
     id: config.AI_MODEL,
@@ -52,9 +53,23 @@ export function createResumeModels(
       models: [model],
       api: {
         stream: (model, context, options) => {
+          const transport = fetchModel ?? options?.fetch ?? fetch
           const configured = {
             ...options,
-            ...(fetchModel && { fetch: fetchModel }),
+            fetch: preparePayload
+              ? async (
+                  resource: Parameters<typeof fetch>[0],
+                  init?: RequestInit,
+                ) => {
+                  if (typeof init?.body !== 'string')
+                    throw new Error('Unexpected provider payload')
+                  const payload = await preparePayload(JSON.parse(init.body))
+                  return transport(resource, {
+                    ...init,
+                    body: JSON.stringify(payload),
+                  })
+                }
+              : transport,
             reasoningEffort:
               config.AI_REASONING_EFFORT === 'off'
                 ? undefined
@@ -62,12 +77,27 @@ export function createResumeModels(
           }
           return api.stream(model, context, configured)
         },
-        streamSimple: (model, context, options) =>
-          api.streamSimple(model, context, {
+        streamSimple: (model, context, options) => {
+          const transport = fetchModel ?? options?.fetch ?? fetch
+          return api.streamSimple(model, context, {
             ...options,
-            ...(fetchModel && { fetch: fetchModel }),
+            fetch: preparePayload
+              ? async (
+                  resource: Parameters<typeof fetch>[0],
+                  init?: RequestInit,
+                ) => {
+                  if (typeof init?.body !== 'string')
+                    throw new Error('Unexpected provider payload')
+                  const payload = await preparePayload(JSON.parse(init.body))
+                  return transport(resource, {
+                    ...init,
+                    body: JSON.stringify(payload),
+                  })
+                }
+              : transport,
             reasoning: (config.AI_REASONING_EFFORT ?? 'off') as ThinkingLevel,
-          }),
+          })
+        },
       },
     }),
   )

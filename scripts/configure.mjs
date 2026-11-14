@@ -8,13 +8,54 @@ export const secretKeys = [
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
   'AI_API_KEY',
+  'STRIPE_SECRET_KEY',
+  'STRIPE_WEBHOOK_SECRET',
 ]
 
 const positiveInteger = z
   .string()
   .regex(/^[1-9]\d*$/)
   .refine((value) => Number.isSafeInteger(Number(value)))
+const credits = z
+  .string()
+  .regex(/^\d+(\.\d{1,6})?$/)
+  .refine((value) => Number.isSafeInteger(Number(value) * 1000000))
+const billingSchema = {
+  BILLING_FREE_MONTHLY_CENTS: z.literal('0'),
+  BILLING_PLUS_MONTHLY_CENTS: z.literal('1000'),
+  BILLING_PRO_MONTHLY_CENTS: z.literal('5000'),
+  BILLING_FREE_CREDITS: credits,
+  BILLING_PLUS_CREDITS: credits,
+  BILLING_PRO_CREDITS: credits,
+  BILLING_MODEL: z.string().min(1),
+  BILLING_TARIFF_VERSION: z.string().min(1),
+  BILLING_INPUT_CREDITS_PER_MILLION: credits,
+  BILLING_OUTPUT_CREDITS_PER_MILLION: credits.refine(
+    (value) => Number(value) > 0,
+  ),
+  BILLING_CACHE_READ_CREDITS_PER_MILLION: credits,
+  BILLING_CACHE_WRITE_CREDITS_PER_MILLION: credits,
+  BILLING_INPUT_RESERVE_MULTIPLIER: positiveInteger.refine(
+    (value) => Number(value) >= 2,
+  ),
+  BILLING_MIN_OUTPUT_TOKENS: positiveInteger,
+  BILLING_MAX_CONCURRENT_RUNS: positiveInteger,
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PLUS_PRICE_ID: z.string(),
+  STRIPE_PRO_PRICE_ID: z.string(),
+  STRIPE_PORTAL_CONFIGURATION_ID: z.string(),
+  STRIPE_API_BASE_URL: z.url(),
+  STRIPE_API_VERSION: z.string().min(1),
+  STRIPE_TIMEOUT_MS: positiveInteger,
+  STRIPE_SYNC_LOCK_MS: positiveInteger,
+  STRIPE_WEBHOOK_TOLERANCE_SECONDS: positiveInteger,
+  STRIPE_CHECKOUT_TTL_SECONDS: positiveInteger.refine(
+    (value) => Number(value) >= 1800 && Number(value) <= 86400,
+  ),
+}
 const schema = z.object({
+  ...billingSchema,
   APP_MODE: z.enum(['demo', 'live']),
   BETTER_AUTH_URL: z.url(),
   BETTER_AUTH_SECRET: z.string().min(32),
@@ -61,6 +102,13 @@ export function parseConfiguration(values) {
       `Invalid .env fields: ${[...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))].join(', ')}`,
     )
   const config = parsed.data
+  if (Number(config.STRIPE_SYNC_LOCK_MS) < Number(config.STRIPE_TIMEOUT_MS) * 2)
+    throw new Error('Stripe sync lease must exceed twice the request timeout.')
+  if (
+    Number(config.BILLING_MIN_OUTPUT_TOKENS) >
+    Number(config.AI_MAX_OUTPUT_TOKENS)
+  )
+    throw new Error('Billing minimum output must fit the model output limit.')
   if (
     config.APP_MODE === 'live' &&
     (!config.AI_API_KEY ||
@@ -69,6 +117,10 @@ export function parseConfiguration(values) {
       !config.GOOGLE_CLIENT_SECRET)
   )
     throw new Error('Live mode requires model and Google OAuth configuration.')
+  if (config.APP_MODE === 'live' && config.BILLING_MODEL !== config.AI_MODEL)
+    throw new Error(
+      'BILLING_MODEL must match AI_MODEL; verify the tariff before changing models.',
+    )
   if (
     config.CLOUDFLARE_CUSTOM_DOMAIN &&
     new URL(config.BETTER_AUTH_URL).origin !==
@@ -124,6 +176,11 @@ export function workerConfiguration(config) {
       ],
     }),
     vars: {
+      ...Object.fromEntries(
+        Object.keys(billingSchema)
+          .filter((key) => !secretKeys.includes(key))
+          .map((key) => [key, config[key]]),
+      ),
       APP_MODE: config.APP_MODE,
       BETTER_AUTH_URL: config.BETTER_AUTH_URL,
       AI_BASE_URL: config.AI_BASE_URL,

@@ -2,11 +2,11 @@
 
 Read `README.md`, `docs/product/PRD.md`, and `docs/harness/architecture.md` before changing product behavior. Full conventions: `docs/harness/standards.md`. Operations: `docs/harness/operations.md`.
 
-For implementation beyond the prototype, read `docs/architecture/technical-architecture.md` first. It is the development baseline: `.env` is the sole authored configuration source. `scripts/configure.mjs` generates `wrangler.jsonc`; never edit deployment parameters there manually. `scripts/cloudflare.mjs` synchronizes only allowlisted runtime secrets and deploys the built Worker. pi-ai owns model access. Both pi-ai and pi-durable runtimes execute the same validated domain tools. pi-durable uses native SQLite-backed Durable Objects per authenticated user/thread/request. Resumes and the full UI chat archive remain browser-local; D1 stores authentication only. Do not claim cloud business storage or token streaming exists.
+For implementation beyond the prototype, read `docs/architecture/technical-architecture.md` first. It is the development baseline: `.env` is the sole authored configuration source. `scripts/configure.mjs` generates `wrangler.jsonc`; never edit deployment parameters there manually. `scripts/cloudflare.mjs` synchronizes only allowlisted runtime secrets and deploys the built Worker. pi-ai owns model access. Both pi-ai and pi-durable runtimes execute the same validated domain tools. pi-durable uses native SQLite-backed Durable Objects per authenticated user/thread/request. Resumes and the full UI chat archive remain browser-local; D1 stores authentication, billing ledger/subscriptions and cached pi-ai results. Do not claim cloud business storage or token streaming exists.
 
 ## Stack
 
-React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is the design system, assistant-ui owns chat runtime, Better Auth owns Google OAuth/session, D1 currently stores only authentication. Resume storage is browser-local and partitioned by identity.
+React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is the design system, assistant-ui owns chat runtime, Better Auth owns Google OAuth/session, D1 stores authentication and billing; full resume/chat libraries remain browser-local. Resume storage is browser-local and partitioned by identity.
 
 ## Commands
 
@@ -45,3 +45,5 @@ React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is t
 
 - Section layout is data (`sectionOrder`), shared by preview/templates/print. Success messages must follow verified tool results, not model claims.
 - Chat archives are scoped by identity and restored through assistant-ui initialMessages. Pass bounded history to pi; imports exclude prior identities. Durable refresh must reuse the immutable pending request/requestId. A disconnect is not an abort.
+
+- Billing is server-authoritative. Preserve atomic reservation, tariff snapshots, tenant isolation and idempotent settlement in both pi runtimes. Read `docs/architecture/billing.md` before changing metering or Stripe. Never grant paid access from a redirect URL, client state, unverified webhook or estimated tokens.

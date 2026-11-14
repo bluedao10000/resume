@@ -5,6 +5,7 @@ import { Button } from '@astryxdesign/core/Button'
 import {
   ArrowDownToLine,
   ArrowRight,
+  CreditCard,
   Check,
   ChevronDown,
   FilePlus2,
@@ -26,6 +27,7 @@ import { ResumeEditor } from '../components/resume/ResumeEditor'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
 import { LandingPage } from '../components/LandingPage'
+import { BillingPanel } from '../components/BillingPanel'
 import {
   emptyResume,
   isExampleResume,
@@ -186,9 +188,13 @@ function Workspace({
   const [mobile, setMobile] = useState<'chat' | 'preview'>('chat')
   const [panel, setPanel] = useState<'preview' | 'edit'>('preview')
   const [modal, setModal] = useState<
-    'import' | 'jd' | 'export' | 'login' | 'history' | null
+    'import' | 'jd' | 'export' | 'login' | 'history' | 'billing' | null
   >(null)
   const [text, setText] = useState('')
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('billing'))
+      setModal('billing')
+  }, [])
   const [notice, setNotice] = useState('')
   const [search, setSearch] = useState('')
   const [intent, setIntent] = useState<Intent>('polish')
@@ -641,6 +647,10 @@ function Workspace({
           <button onClick={() => setModal('history')} aria-label="历史对话">
             <History size={17} />
             历史对话
+          </button>
+          <button onClick={() => setModal('billing')}>
+            <CreditCard size={17} />
+            套餐与用量
           </button>
         </nav>
         <div className="nav-group-label recent-label">
@@ -1141,6 +1151,16 @@ function Workspace({
             />
           )}
           {loginError ? <p role="alert">{loginError}</p> : null}
+        </Modal>
+      ) : null}
+      {modal === 'billing' ? (
+        <Modal title="套餐与用量" onClose={() => setModal(null)}>
+          <BillingPanel
+            signedIn={!!session}
+            onLogin={() => {
+              setModal('login')
+            }}
+          />
         </Modal>
       ) : null}
       {modal === 'history' ? (

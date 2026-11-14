@@ -4,6 +4,16 @@ import { AgentRequestSchema, demoAgent } from '../../domain/resume'
 import { getAuth } from '../../server/auth'
 import { AgentError, generateResume } from '../../server/resume-agent'
 import { z } from 'zod'
+import {
+  BillingError,
+  prepareBilledPayload,
+  reserveRun,
+  releaseRun,
+  settleRun,
+  type BillingEnv,
+} from '../../server/billing'
+import { AgentResultSchema } from '../../domain/resume'
+import type { TokenUsage } from '../../domain/billing'
 const IdentitySchema = z.object({
   threadId: z.string().min(1).max(120),
   requestId: z.string().min(1).max(120),
@@ -37,7 +47,7 @@ export const Route = createFileRoute('/api/agent')({
       GET: ({ request }) => durableStatus(request),
       DELETE: ({ request }) => durableStatus(request),
       POST: async ({ request }) => {
-        const config = env as unknown as Record<string, string>
+        const config = env as unknown as BillingEnv
         if (Number(request.headers.get('content-length') ?? 0) > 100000)
           return Response.json(
             { error: '内容过长，请缩减到 20,000 字以内。' },
@@ -75,6 +85,11 @@ export const Route = createFileRoute('/api/agent')({
               { error: '模型未配置，请联系管理员。' },
               { status: 503 },
             )
+          const admission = await reserveRun(
+            config,
+            session.user.id,
+            parsed.data,
+          )
           if (config.AGENT_RUNTIME === 'pi-durable') {
             const identity = IdentitySchema.safeParse(parsed.data)
             if (!identity.success)
@@ -85,14 +100,49 @@ export const Route = createFileRoute('/api/agent')({
             return durableStub(session.user.id, identity.data).fetch(
               new Request('https://resume-agent.internal/', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-folio-billing-run': admission.run.id,
+                },
                 body: JSON.stringify(parsed.data),
               }),
             )
           }
-          return Response.json(
-            await generateResume(parsed.data, config, fetch, request.signal),
-          )
+          if (!admission.fresh) {
+            if (admission.run.result_json)
+              return Response.json(
+                AgentResultSchema.parse(JSON.parse(admission.run.result_json)),
+              )
+            throw new BillingError(
+              '该请求正在执行或已经结束，请查看历史对话。',
+              409,
+            )
+          }
+          let usage: TokenUsage | undefined
+          try {
+            const result = await generateResume(
+              parsed.data,
+              {
+                ...config,
+                AI_MAX_OUTPUT_TOKENS: String(admission.run.max_output_tokens),
+              } as unknown as Record<string, string>,
+              fetch,
+              request.signal,
+              {
+                onUsage: (value) => {
+                  usage = value
+                },
+                preparePayload: async (payload) =>
+                  prepareBilledPayload(payload, admission.run, config.AI_API),
+              },
+            )
+            await settleRun(config, admission.run.id, usage!, result)
+            return Response.json(result)
+          } catch (error) {
+            if (usage) await settleRun(config, admission.run.id, usage)
+            else await releaseRun(config, admission.run.id)
+            throw error
+          }
         } catch (error) {
           const reference = crypto.randomUUID()
           const timeout =
@@ -113,14 +163,19 @@ export const Route = createFileRoute('/api/agent')({
           return Response.json(
             {
               error: `${
-                error instanceof AgentError
+                error instanceof AgentError || error instanceof BillingError
                   ? error.message
                   : timeout
                     ? '生成超时，请稍后重试。当前简历已保留。'
                     : 'Agent 暂时无法完成，请稍后重试。当前简历已保留。'
               } 参考编号：${reference}`,
             },
-            { status: error instanceof AgentError ? error.status : 502 },
+            {
+              status:
+                error instanceof AgentError || error instanceof BillingError
+                  ? error.status
+                  : 502,
+            },
           )
         }
       },

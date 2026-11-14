@@ -13,6 +13,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiConfigRouteImport } from './routes/api/config'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as ApiBillingIndexRouteImport } from './routes/api/billing/index'
+import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
+import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
+import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +38,46 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBillingIndexRoute = ApiBillingIndexRouteImport.update({
+  id: '/api/billing/',
+  path: '/api/billing/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
+  id: '/api/billing/checkout',
+  path: '/api/billing/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingPortalRoute = ApiBillingPortalRouteImport.update({
+  id: '/api/billing/portal',
+  path: '/api/billing/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
+  id: '/api/billing/webhook',
+  path: '/api/billing/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/billing/': typeof ApiBillingIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/billing': typeof ApiBillingIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +85,42 @@ export interface FileRoutesById {
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/billing/checkout': typeof ApiBillingCheckoutRoute
+  '/api/billing/portal': typeof ApiBillingPortalRoute
+  '/api/billing/webhook': typeof ApiBillingWebhookRoute
+  '/api/billing/': typeof ApiBillingIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/agent' | '/api/config' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/api/agent'
+    | '/api/config'
+    | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/webhook'
+    | '/api/billing/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/agent' | '/api/config' | '/api/auth/$'
-  id: '__root__' | '/' | '/api/agent' | '/api/config' | '/api/auth/$'
+  to:
+    | '/'
+    | '/api/agent'
+    | '/api/config'
+    | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/webhook'
+    | '/api/billing'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/agent'
+    | '/api/config'
+    | '/api/auth/$'
+    | '/api/billing/checkout'
+    | '/api/billing/portal'
+    | '/api/billing/webhook'
+    | '/api/billing/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +128,10 @@ export interface RootRouteChildren {
   ApiAgentRoute: typeof ApiAgentRoute
   ApiConfigRoute: typeof ApiConfigRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
+  ApiBillingPortalRoute: typeof ApiBillingPortalRoute
+  ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
+  ApiBillingIndexRoute: typeof ApiBillingIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +164,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/billing/': {
+      id: '/api/billing/'
+      path: '/api/billing'
+      fullPath: '/api/billing/'
+      preLoaderRoute: typeof ApiBillingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/checkout': {
+      id: '/api/billing/checkout'
+      path: '/api/billing/checkout'
+      fullPath: '/api/billing/checkout'
+      preLoaderRoute: typeof ApiBillingCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/portal': {
+      id: '/api/billing/portal'
+      path: '/api/billing/portal'
+      fullPath: '/api/billing/portal'
+      preLoaderRoute: typeof ApiBillingPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/webhook': {
+      id: '/api/billing/webhook'
+      path: '/api/billing/webhook'
+      fullPath: '/api/billing/webhook'
+      preLoaderRoute: typeof ApiBillingWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +200,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentRoute: ApiAgentRoute,
   ApiConfigRoute: ApiConfigRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
+  ApiBillingPortalRoute: ApiBillingPortalRoute,
+  ApiBillingWebhookRoute: ApiBillingWebhookRoute,
+  ApiBillingIndexRoute: ApiBillingIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

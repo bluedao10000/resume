@@ -78,3 +78,9 @@
 真实 pi adapter 的 SSE fixtures 分别验证 Responses 和 Chat Completions，模型响应必须有一个有效工具；成功消息与字段差异一致。SQLite Harness 测试验证完成后重开、生成中关闭重开、相同 requestId 不重复模型调用、冲突输入拒绝。旧布局兼容、非法重复章节与服务端上下文预算分别验证。
 
 `npm run test:live` 是显式真实 provider 检查，普通测试跳过。已用根 `.env` 的真实模型验证 pi-ai 章节移动、历史问答、导入隔离和原生 pi-durable 工具执行。生产额外使用短期专用测试身份，验证实际 Worker/DO/provider、预览顺序、刷新恢复、历史回忆、幂等/冲突和简历不复制；结束清理 user/session。没有重新执行真实 Google 授权，也没有模拟 Cloudflare 强制实例回收。详细边界和版本见部署记录。
+
+## 计费首版补充验证（2026-11-14）
+
+43 项领域/服务端测试与 4 项配置测试通过，本地和生产各 33 项浏览器回归通过，TypeScript / 格式 / 构建通过。计费覆盖整数分类计价、并发预算准入、租户隔离、重复扣费防护、已报告失败用量、两种 runtime 的网络前预算检查、durable 重开后 usage 恢复、Stripe 原始正文签名/时效、多签名、价格核对、未付款无权益、回调幂等与旧订阅事件隔离。
+
+生产专用测试账户完成真实 durable 模型调用与结算：748 input + 29 output = 0.04465 credits；预留释放，重复提交不增加用量，测试账户和账本已清理。Stripe 实际商户支付尚未配置，真实支付闭环不在本次通过范围。详见 [发布记录](../deployments/2026-11-14-cloudflare.md)。

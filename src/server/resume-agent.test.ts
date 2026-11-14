@@ -206,4 +206,36 @@ describe('pi-ai 简历工具执行', () => {
       generateResume(input, config, transport),
     ).rejects.toMatchObject({ code: 'INVALID_TOOL_ARGUMENTS' })
   })
+  it('无效工具仍记录供应商实际用量，预算拒绝发生在网络请求之前', async () => {
+    const transport = vi
+      .fn<typeof fetch>()
+      .mockImplementation(async () =>
+        toolResponse('resume_reorder_sections', { section: 'unknown' }),
+      )
+    const onUsage = vi.fn()
+    await expect(
+      generateResume(input, config, transport, undefined, {
+        onUsage,
+        preparePayload: async (payload) => payload,
+      }),
+    ).rejects.toMatchObject({ code: 'INVALID_TOOL_ARGUMENTS' })
+    expect(onUsage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: 10,
+        output: 10,
+        cacheRead: 0,
+        cacheWrite: 0,
+      }),
+    )
+    transport.mockClear()
+    await expect(
+      generateResume(input, config, transport, undefined, {
+        onUsage,
+        preparePayload: async () => {
+          throw new Error('budget rejected')
+        },
+      }),
+    ).rejects.toThrow()
+    expect(transport).not.toHaveBeenCalled()
+  })
 })

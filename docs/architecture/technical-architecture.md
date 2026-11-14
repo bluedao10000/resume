@@ -49,7 +49,7 @@ Folio 采用 **TanStack Start 全栈应用 + Cloudflare Workers/Static Assets + 
 - `resume-agent.ts` 是一次模型请求、一次受校验工具操作的轻量适配器。`durable-harness.ts` 使用原生 Harness / registry / defineTool，相同领域工具完成后 terminate，不执行任意代码或终端工具。
 - 当前 DO 粒度是 `(session.userId, threadId, requestId)` 的单轮任务；保存原生 transcript/tasks/tool results，并非下文目标“一条 thread 一个 DO”。请求正文不可变，同 ID 不同输入返回 409。
 - 浏览器按身份保存完整对话与 pendingRequest；每次传入最近最多 40 条、合计 32,000 字符历史。durable 返回 202，前端轮询 JSON 快照；刷新复用请求，明确取消单独调用 DELETE。当前没有 SSE/token streaming。
-- 简历及完整 UI 对话仍在 localStorage，D1 仍仅认证。DO 执行记录不等于跨设备简历/聊天同步，不宣称业务版本审计、完整事实溯源或云端回滚。
+- 简历库及完整 UI 对话仍在 localStorage；D1 已保存认证、计费账本/订阅与 pi-ai 最终结果缓存，见 [计费架构](billing.md)。DO 执行记录不等于跨设备简历/聊天同步，不宣称业务版本审计、完整事实溯源或云端回滚。
 
 ## 3. pi 技术核实与版本基线
 

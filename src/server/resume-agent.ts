@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Message } from '@earendil-works/pi-ai'
 import { AgentRequestSchema } from '../domain/resume'
 import { createResumeModels } from './pi-models'
+import type { TokenUsage } from '../domain/billing'
 import {
   agentInstructions,
   agentPrompt,
@@ -24,9 +25,17 @@ export async function generateResume(
   config: Record<string, string>,
   fetchModel: typeof fetch = fetch,
   signal?: AbortSignal,
+  meter?: {
+    onUsage: (usage: TokenUsage) => void
+    preparePayload: (payload: unknown) => Promise<unknown>
+  },
 ) {
   const input = AgentRequestSchema.parse(raw)
-  const { models, model } = createResumeModels(config)
+  const { models, model } = createResumeModels(
+    config,
+    undefined,
+    meter?.preparePayload,
+  )
   const messages: Message[] =
     input.intent === 'import'
       ? []
@@ -94,6 +103,7 @@ export async function generateResume(
       }),
     },
   )
+  meter?.onUsage(response.usage)
   if (timeout.aborted)
     throw new AgentError(
       'MODEL_TIMEOUT',

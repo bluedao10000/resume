@@ -9,6 +9,7 @@ import {
   openResumeHarness,
   submitResumeTurn,
   resumeTurnSnapshot,
+  resumeTurnUsage,
 } from './durable-harness'
 import { testModelConfig, toolResponse } from './pi-test-fixtures'
 const input = AgentRequestSchema.parse({
@@ -19,6 +20,34 @@ const input = AgentRequestSchema.parse({
   requestId: 'request-fixture',
 })
 describe('pi-durable SQLite 恢复', () => {
+  it('持久化运行时在实际供应商网络调用前执行预算检查', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'folio-pi-budget-'))
+    const transport = vi.fn<typeof fetch>()
+    const harness = await openResumeHarness(
+      await openNodeSqliteStorage(join(directory, 'session.db')),
+      testModelConfig,
+      undefined,
+      transport,
+      async () => {
+        throw new Error('budget rejected')
+      },
+    )
+    try {
+      const turn = await submitResumeTurn(harness, input)
+      await turn.wait(context)
+      expect(transport).not.toHaveBeenCalled()
+      expect((await resumeTurnSnapshot(harness)).status).toBe('failed')
+      expect(await resumeTurnUsage(harness)).toEqual({
+        input: 0,
+        output: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+      })
+    } finally {
+      await harness.close(context)
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
   it('生成中关闭再打开 Harness，恢复原提交并完成工具操作', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'folio-pi-pending-'))
     const path = join(directory, 'session.db')
@@ -89,6 +118,12 @@ describe('pi-durable SQLite 恢复', () => {
       await submission.wait(context)
       const first = await resumeTurnSnapshot(harness)
       expect(first.status).toBe('completed')
+      expect(await resumeTurnUsage(harness)).toEqual({
+        input: 10,
+        output: 10,
+        cacheRead: 0,
+        cacheWrite: 0,
+      })
       if (first.status === 'completed')
         expect(first.result.resume.sectionOrder).toEqual([
           'summary',
@@ -105,6 +140,12 @@ describe('pi-durable SQLite 恢复', () => {
       )
       harness.resume()
       expect(await resumeTurnSnapshot(harness)).toEqual(first)
+      expect(await resumeTurnUsage(harness)).toEqual({
+        input: 10,
+        output: 10,
+        cacheRead: 0,
+        cacheWrite: 0,
+      })
       const again = await submitResumeTurn(harness, input)
       expect(again.id).toBe(submission.id)
       await again.wait(context)

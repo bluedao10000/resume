@@ -36,7 +36,7 @@ prototype/                  原型操作手册、页面验收与界面截图
    lib/                     浏览器身份客户端、本机存储与数据导出
    server/                  Better Auth 服务端工厂
    routes/                  TanStack Start 页面及 API
- migrations/                Better Auth D1 数据库迁移
+ migrations/                Better Auth 与计费 D1 数据库迁移
  scripts/                   认证 schema 生成工具
  tests/                     浏览器工作流与 API 测试
 ```
@@ -60,10 +60,12 @@ prototype/                  原型操作手册、页面验收与界面截图
 
 普通对话修改与润色保存到当前简历，不增加条目；导入和按岗位定制新增简历，继续修改定制稿仍更新该稿。当前没有逐轮聊天修改历史与回滚，已有副本不会自动删除。
 
-简历库按访客 / Google user ID 在当前浏览器 localStorage 分区。D1 当前只存认证数据；没有云端简历/聊天同步、PDF/DOCX 解析、复杂工具规划或服务端 PDF 渲染。完整对话按身份保存在本机，刷新会恢复，可从侧栏“历史对话”重开；模型接收最近最多 40 条、合计 32,000 字符上下文。JSON 目前只备份简历。`live` 模式会把输入和检索出的事实来源发送给所配置的模型服务。
+简历库按访客 / Google user ID 在当前浏览器 localStorage 分区。D1 保存认证、计费账本、订阅与 pi-ai 最终结果缓存；没有云端简历/聊天同步、PDF/DOCX 解析、复杂工具规划或服务端 PDF 渲染。完整对话按身份保存在本机，刷新会恢复，可从侧栏“历史对话”重开；模型接收最近最多 40 条、合计 32,000 字符上下文。JSON 目前只备份简历。`live` 模式会把输入和检索出的事实来源发送给所配置的模型服务。
 
 首次进入工作空间预置一份虚构的“林知夏”示例简历，列表、预览和打印均明确标识。删除整份简历、工作经历和清理重复副本均先确认。整份删除或清理后，在继续修改或刷新前可撤销最近一次操作。删除最后一份后保持空库，刷新不会重新插入示例。侧栏与预览同步当前集合，其他标签页的变更也会同步。
 
 > 当前是可运行、可评审的产品原型。下一阶段优先建设用户隔离的 D1 简历存储、完整事实溯源与评估集。
 
 Agent 模型访问基于 `@earendil-works/pi-ai@1.5.2`。`.env` 的 `AGENT_RUNTIME` 可选 `pi-ai` / `pi-durable`；当前生产配置使用后者，在 SQLite Durable Object 中保存每轮原生 Harness 任务与工具结果，刷新复用原请求。`AI_API` 选择 pi 的 Responses 或 Chat Completions adapter，当前模型需要 Responses + `AI_REASONING_EFFORT=low` 才能调用函数工具。章节移动、内容更新和只读回答共享受校验的工具，章节顺序由所有简历渲染入口读取。
+
+计费首版提供 Free $0、Plus $10、Pro $50 / 月，以及服务端实际 Token 记账和额度控制。参见 [套餐规则](docs/product/billing.md)、[计费架构](docs/architecture/billing.md) 与 [支付开通](docs/harness/operations.md#stripe-支付开通)。未配置 Stripe 时仅 Free 可用，不能实际购买。
