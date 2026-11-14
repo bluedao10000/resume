@@ -50,6 +50,7 @@ import {
   type AgentResult,
 } from '../domain/resume'
 import { authClient } from '../lib/auth-client'
+import { fetchSession } from '../server/session'
 import { exportJSON, loadResumes, saveResumes } from '../lib/storage'
 import {
   loadChats,
@@ -107,6 +108,7 @@ const structuredData = {
 }
 export const Route = createFileRoute('/')({
   component: Entry,
+  loader: () => fetchSession(),
   head: () => ({
     meta: [
       { title: SITE_TITLE },
@@ -159,7 +161,11 @@ type Config = z.infer<typeof ConfigSchema>
 type Session = typeof authClient.$Infer.Session
 
 function Entry() {
-  const { data: session, isPending } = authClient.useSession()
+  const initialSession = Route.useLoaderData()
+  const { data: liveSession, isPending } = authClient.useSession()
+  // SSR resolves the cookie session, so signed-in users never see the landing
+  // page first; useSession takes over once loaded for sign-in/out updates.
+  const session = isPending ? initialSession : liveSession
   const [config, setConfig] = useState<Config | null>(null)
   const [configError, setConfigError] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
@@ -222,7 +228,15 @@ function Entry() {
         </button>
       </main>
     )
-  if (!config || isPending)
+  // Signed-in visitors wait on the config fetch with a neutral loader; the
+  // landing page stays reserved for visitors who are actually signed out.
+  if (!config && session)
+    return (
+      <main className="entry-loading" role="status" aria-label="正在加载">
+        folio
+      </main>
+    )
+  if (!config)
     return (
       <LandingPage
         ready={false}
