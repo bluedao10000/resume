@@ -1,0 +1,71 @@
+// Generated from .env by scripts/configure.mjs. Do not edit.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "folio-resume-agent",
+  "account_id": "9d57abc6c216e0ca3ed82fb41a59314b",
+  "main": "./src/worker.ts",
+  "compatibility_date": "2026-11-14",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./dist/client"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "folio",
+      "database_id": "edd94c24-ba7f-4161-a8bf-6fcfaa5a50f8",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RESUME_AGENT",
+        "class_name": "ResumeAgentSession"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "resume-agent-v1",
+      "new_sqlite_classes": [
+        "ResumeAgentSession"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "pattern": "r.story2u.xyz",
+      "custom_domain": true
+    }
+  ],
+  "vars": {
+    "APP_MODE": "live",
+    "BETTER_AUTH_URL": "https://r.story2u.xyz",
+    "AI_BASE_URL": "https://api.openai.com/v1",
+    "AI_MODEL": "gpt-6.1-sol",
+    "AGENT_RUNTIME": "pi-durable",
+    "AGENT_TIMEOUT_MS": "45000",
+    "AI_CONTEXT_WINDOW": "128000",
+    "AI_MAX_OUTPUT_TOKENS": "12000",
+    "AI_MODEL_REASONING": "true",
+    "AI_API": "openai-responses",
+    "AI_REASONING_EFFORT": "low"
+  },
+  "secrets": {
+    "required": [
+      "BETTER_AUTH_SECRET",
+      "GOOGLE_CLIENT_ID",
+      "GOOGLE_CLIENT_SECRET",
+      "AI_API_KEY"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
