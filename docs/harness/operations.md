@@ -25,6 +25,10 @@ npm run config:generate
 
 `predev` / `prebuild` 自动校验 `.env` 并生成 `wrangler.jsonc`，不再手工维护 Wrangler vars。脚本拒绝并存的 `.dev.vars`、`.env.local` 等配置文件。Vite 插件仅加载声明的运行密钥；生产部署前删除插件生成的预览专用 `dist/server/.dev.vars`。
 
+开发命令通过 Node 的 `--env-file=.env` 在进程启动时读取配置，使 `NODE_OPTIONS=--max-old-space-size=6144` 生效（6 GiB 旧生代堆上限，总堆上限还包含新生代等空间）。该参数仅用于本地 Node 进程，不会作为 Worker binding 部署，也不改变 Cloudflare 内存限制。已有 `.env` 需要自行补上该行；终端已导出的同名环境变量优先于文件。
+
+若开发服务以 134 / SIGABRT 退出，先查看完整日志中的首条 fatal error。`Reached heap limit ... JavaScript heap out of memory` 配合 GC 日志表示 Node 堆耗尽，不能仅凭调用栈尾部认定网络或 Worker 故障。先重启本地服务；长期运行仍持续增长时需单独分析堆快照，调高上限只是缓解，不能证明内存泄漏已修复。
+
 ## 配置表
 
 | 配置                             | 默认/要求                                         | 用途                              |
