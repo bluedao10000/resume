@@ -40,7 +40,7 @@ import {
 import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
-import { EmailOtpLogin } from '../components/EmailOtpLogin'
+import { LoginMethods, type SocialProvider } from '../components/LoginMethods'
 import { LandingPage, landingFaq } from '../components/LandingPage'
 import { BillingPanel } from '../components/BillingPanel'
 import { AccountDetails } from '../components/AccountDetails'
@@ -171,6 +171,14 @@ const ConfigSchema = z.object({
 type Config = z.infer<typeof ConfigSchema>
 type Session = typeof authClient.$Infer.Session
 
+function configuredSocialMethods(config: Config): SocialProvider[] {
+  const methods: SocialProvider[] = []
+  if (config.authMethods?.github) methods.push('github')
+  if (config.authMethods?.market ?? config.authConfigured)
+    methods.push(config.market === 'cn' ? 'wechat' : 'google')
+  return methods
+}
+
 function Entry() {
   const initialSession = Route.useLoaderData()
   const { data: liveSession, isPending } = authClient.useSession()
@@ -180,11 +188,25 @@ function Entry() {
   const [config, setConfig] = useState<Config | null>(null)
   const [configError, setConfigError] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
+  const [loginOpen, setLoginOpen] = useState(false)
   const [loginBusy, setLoginBusy] = useState(false)
   const [loginError, setLoginError] = useState('')
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('loginFailed'))
-      setLoginError('登录未完成，请重试。')
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('loginFailed')) {
+      setLoginOpen(true)
+      const error = url.searchParams.get('error')
+      setLoginError(
+        error === 'account_not_linked' ||
+          error === 'github_verified_email_required'
+          ? '请使用原邮箱登录，或先在 GitHub 验证同一邮箱后重试。'
+          : '登录未完成，请重试或选择其他方式。',
+      )
+      url.searchParams.delete('loginFailed')
+      url.searchParams.delete('error')
+      url.searchParams.delete('error_description')
+      window.history.replaceState(window.history.state, '', url)
+    }
     const controller = new AbortController()
     fetch('/api/config', { signal: controller.signal })
       .then((response) => {
@@ -202,7 +224,7 @@ function Entry() {
     }
     return () => controller.abort()
   }, [])
-  async function login(provider: 'wechat' | 'google' | 'github') {
+  async function login(provider: SocialProvider) {
     setLoginBusy(true)
     setLoginError('')
     try {
@@ -260,33 +282,48 @@ function Entry() {
         onLogin={() => void login('google')}
       />
     )
-  const marketProvider = config.market === 'cn' ? 'wechat' : 'google'
+  const social = configuredSocialMethods(config)
+  const email = config.authMethods?.email ?? false
+  const usesLoginDialog =
+    config.market === 'cn' || email || social.includes('github')
   if (!session && !(config.mode === 'demo' && demoOpen))
     return (
-      <LandingPage
-        ready
-        loginProvider={config.market === 'cn' ? '微信' : 'Google'}
-        canLogin={config.authMethods?.market ?? config.authConfigured}
-        onGithub={
-          config.authMethods?.github ? () => void login('github') : undefined
-        }
-        emailLogin={config.authMethods?.email}
-        isLoading={loginBusy}
-        error={loginError}
-        onLogin={() => void login(marketProvider)}
-        onDemo={
-          config.mode === 'demo'
-            ? () => {
-                setDemoOpen(true)
-                try {
-                  sessionStorage.setItem('folio:demo-open', 'true')
-                } catch {
-                  /* Optional. */
+      <>
+        <LandingPage
+          ready
+          opensLoginDialog={usesLoginDialog}
+          canLogin={email || social.length > 0}
+          isLoading={!usesLoginDialog && loginBusy}
+          error={usesLoginDialog ? '' : loginError}
+          onLogin={() => {
+            if (usesLoginDialog) setLoginOpen(true)
+            else void login('google')
+          }}
+          onDemo={
+            config.mode === 'demo'
+              ? () => {
+                  setDemoOpen(true)
+                  try {
+                    sessionStorage.setItem('folio:demo-open', 'true')
+                  } catch {
+                    /* Optional. */
+                  }
                 }
-              }
-            : undefined
-        }
-      />
+              : undefined
+          }
+        />
+        {loginOpen && usesLoginDialog ? (
+          <Modal title="登录 Folio" onClose={() => setLoginOpen(false)}>
+            <LoginMethods
+              social={social}
+              email={email}
+              busy={loginBusy}
+              error={loginError}
+              onLogin={(provider) => void login(provider)}
+            />
+          </Modal>
+        ) : null}
+      </>
     )
   return (
     <Workspace
@@ -312,7 +349,7 @@ function Workspace({
 }: {
   session: Session | null
   config: Config
-  onLogin: (provider: 'wechat' | 'google' | 'github') => Promise<void>
+  onLogin: (provider: SocialProvider) => Promise<void>
   onSignOut: () => Promise<void>
   loginBusy: boolean
   loginError: string
@@ -1350,34 +1387,14 @@ function Workspace({
               }}
             />
           ) : (
-            <>
-              {(config.authMethods?.market ?? config.authConfigured) && (
-                <Button
-                  label={
-                    config.market === 'cn' ? '使用微信继续' : '使用 Google 继续'
-                  }
-                  width="100%"
-                  variant="primary"
-                  isLoading={loginBusy}
-                  onClick={() =>
-                    void onLogin(config.market === 'cn' ? 'wechat' : 'google')
-                  }
-                />
-              )}
-              {config.authMethods?.github && (
-                <button
-                  className="outline-button"
-                  disabled={loginBusy}
-                  onClick={() => void onLogin('github')}
-                >
-                  使用 GitHub 登录
-                </button>
-              )}
-              {config.authMethods?.email && <EmailOtpLogin />}
-              {!config.authConfigured && <p>登录尚未配置</p>}
-            </>
+            <LoginMethods
+              social={configuredSocialMethods(config)}
+              email={config.authMethods?.email ?? false}
+              busy={loginBusy}
+              error={loginError}
+              onLogin={(provider) => void onLogin(provider)}
+            />
           )}
-          {loginError ? <p role="alert">{loginError}</p> : null}
         </Modal>
       ) : null}
       {modal === 'billing' ? (

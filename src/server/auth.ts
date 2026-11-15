@@ -35,8 +35,24 @@ export function getAuth() {
     baseURL: config.BETTER_AUTH_URL,
     ...(china && {
       account: {
-        accountLinking: { enabled: false },
+        accountLinking: {
+          enabled: true,
+          trustedProviders: [],
+          allowDifferentEmails: false,
+        },
         encryptOAuthTokens: true,
+      },
+    }),
+    ...(china && {
+      user: {
+        validateUserInfo: ({ user, source }) => {
+          if (
+            source.action === 'link-account' &&
+            (source.oauth?.providerId !== 'github' ||
+              user.emailVerified !== true)
+          )
+            return { error: 'github_verified_email_required' }
+        },
       },
     }),
     socialProviders: {

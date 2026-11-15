@@ -1,12 +1,19 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { authClient } from '../lib/auth-client'
 
 export function EmailOtpLogin() {
+  const emailInput = useRef<HTMLInputElement>(null)
+  const codeInput = useRef<HTMLInputElement>(null)
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState('')
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (sent) codeInput.current?.focus()
+    else emailInput.current?.focus()
+  }, [sent])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -45,6 +52,7 @@ export function EmailOtpLogin() {
       <label>
         邮箱
         <input
+          ref={emailInput}
           type="email"
           autoComplete="email"
           value={email}
@@ -59,6 +67,7 @@ export function EmailOtpLogin() {
           <label>
             验证码
             <input
+              ref={codeInput}
               inputMode="numeric"
               autoComplete="one-time-code"
               pattern="[0-9]{6}"

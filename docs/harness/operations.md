@@ -254,7 +254,7 @@ npm run deploy
 两种方式都通过 Better Auth 登录，工作台和计费接口继续读取同一个会话里的 `user.id`。任一市场均可启用这两种方式。配置完整后对应按钮会出现在落地页。
 
 - 邮箱验证码。验证 Resend 发件域名，在 `.env` 设置仅具发信权限的 `AUTH_RESEND_API_KEY` 和已验证域名下的 `AUTH_EMAIL_FROM`。执行 `npm run db:migrate:local` 与 `npm run dev`，从落地页发送验证码，收信后输入六位验证码并验证登录。首次验证由 Better Auth 创建账号。退出后用相同邮箱登录，核对仍进入同一账户。错误或过期码应停留在登录页。
-- GitHub。到 GitHub → Settings → Developer settings → OAuth Apps 创建 OAuth App。生产回调 URL 使用 `BETTER_AUTH_URL` 的域名，Folio 当前为 `https://www.codeiy.com/api/auth/callback/github`。本地另建应用，回调 URL 填 `http://localhost:5173/api/auth/callback/github`，并让 `BETTER_AUTH_URL` 匹配本地 origin。在对应环境填入 `GITHUB_CLIENT_ID` 和 `GITHUB_CLIENT_SECRET`。点击 GitHub 登录，授权后由 Better Auth 处理回调，经过 `/auth/callback` 确认会话并回到工作台。取消授权应回到落地页并显示错误。
+- GitHub。到 GitHub → Settings → Developer settings → OAuth Apps 创建 OAuth App。生产回调 URL 使用 `BETTER_AUTH_URL` 的域名，Folio 当前为 `https://www.codeiy.com/api/auth/callback/github`。本地另建应用，回调 URL 填 `http://localhost:5173/api/auth/callback/github`，并让 `BETTER_AUTH_URL` 匹配本地 origin。在对应环境填入 `GITHUB_CLIENT_ID` 和 `GITHUB_CLIENT_SECRET`。在「开始定制简历」弹窗选择 GitHub。授权后由 Better Auth 处理回调，经过 `/auth/callback` 确认会话并回到工作台。授权失败会重新打开弹窗。国内账户已有同邮箱时，只有本地和 GitHub 均确认邮箱已验证才会关联到已有账户，沿用原 user ID、简历分区和套餐。
 
 ## 支付宝 Vibe Pay 网页收款
 
