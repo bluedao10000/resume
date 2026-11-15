@@ -383,19 +383,22 @@ test('公开首页的正文和 SEO 资源不依赖客户端 JavaScript', async (
   const response = await request.get('/')
   expect(response.status()).toBe(200)
   const html = await response.text()
-  expect(html).toContain('把已有简历，')
-  expect(html).toContain('改成适合目标岗位的投递版本')
+  expect(html).toContain('<h1>按岗位 JD 定制简历</h1>')
+  expect(html).toContain('简历定制示例：用已有经历投设计系统岗位')
+  expect(html).toContain('第二条写设计系统')
+  expect(html).toContain('从第二条移到第一条')
   expect(html).toContain('虚构案例 · 非实时生成')
   expect(html).toContain('开始定制简历')
   expect(html).toContain('首页只记录匿名的访问与按钮点击次数')
   expect(html).toContain('删除浏览器内的简历不会同时删除这些服务端记录')
-  expect(html).toContain('rel="canonical" href="https://r.story2u.xyz/"')
+  expect(html).toContain('rel="canonical" href="https://www.codeiy.com/"')
   expect(html).toContain('property="og:image"')
   expect(html).toContain('application/ld+json')
+  expect(html).toContain('"priceCurrency":"CNY"')
   for (const [path, content] of [
     ['/robots.txt', 'Disallow: /api/'],
-    ['/sitemap.xml', '<loc>https://r.story2u.xyz/</loc>'],
-    ['/llms.txt', 'AI 仍可能出错'],
+    ['/sitemap.xml', '<loc>https://www.codeiy.com/</loc>'],
+    ['/llms.txt', 'https://www.codeiy.com/#product'],
   ]) {
     const asset = await request.get(path)
     expect(asset.status()).toBe(200)
@@ -431,7 +434,7 @@ test('未登录展示独立落地页，Google 登录失败可重试且不访问�
   await page.goto('/')
   await expect(
     page.getByRole('heading', {
-      name: /把已有简历，.*改成适合目标岗位的投递版本/,
+      name: '按岗位 JD 定制简历',
     }),
   ).toBeVisible()
   await expect(page.locator('.app-shell')).toHaveCount(0)
@@ -452,7 +455,9 @@ test('未登录展示独立落地页，Google 登录失败可重试且不访问�
   expect(attempts[0]).toMatchObject({ provider: 'google', callbackURL: '/' })
   await page.getByRole('link', { name: '查看定制示例', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: '一份基础简历，怎样投设计系统岗位？' }),
+    page.getByRole('heading', {
+      name: '简历定制示例：用已有经历投设计系统岗位',
+    }),
   ).toBeInViewport()
   await expect(
     page.locator('.landing-document .resume-job').first().locator('li').first(),

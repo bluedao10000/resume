@@ -127,14 +127,11 @@ export function LandingPage({
       </header>
       <main id="main">
         <section className="landing-intro">
-          <h1>
-            把已有简历，
-            <br />
-            改成适合目标岗位的投递版本
-          </h1>
+          <h1>按岗位 JD 定制简历</h1>
           <p>
-            导入简历，粘贴岗位描述，用对话调整经历重点。 Folio
-            帮你保留原稿，整理独立版本，核对后导出 PDF。
+            导入已有简历，粘贴目标岗位描述（JD）。Folio
+            根据岗位要求调整已有经历的顺序和表达，保留原稿并生成独立投递版本。核对修改和待补充信息后，可导出
+            PDF。
           </p>
           <div className="landing-actions">
             {canLogin || !ready ? (
@@ -189,7 +186,7 @@ export function LandingPage({
         >
           <div className="landing-product-bar">
             <h2 id="landing-example-title">
-              一份基础简历，怎样投设计系统岗位？
+              简历定制示例：用已有经历投设计系统岗位
             </h2>
             <span>虚构案例 · 非实时生成</span>
           </div>
@@ -202,7 +199,9 @@ export function LandingPage({
               <dl className="landing-example-context">
                 <div>
                   <dt>原简历</dt>
-                  <dd>林知夏的设计经历包括产品体验、设计系统和用户研究。</dd>
+                  <dd>
+                    原简历的第一份工作经历先写平台体验设计，第二条写设计系统。
+                  </dd>
                 </div>
                 <div>
                   <dt>目标岗位要求</dt>
@@ -212,11 +211,11 @@ export function LandingPage({
                 </div>
               </dl>
               <div className="landing-request">
-                针对这个岗位，把我已有的设计系统经历放在前面。
+                针对这个岗位，把设计系统要点放在这份工作经历的第一条。
               </div>
               <div className="landing-reply">
                 <h3>定制后的重点</h3>
-                <p>将原简历中这条经历提到首位，保留原有事实：</p>
+                <p>把同一份工作经历里的设计系统要点从第二条移到第一条：</p>
                 <blockquote>
                   {tailoredExample.experience[0].bullets[0]}
                 </blockquote>

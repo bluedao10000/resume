@@ -68,7 +68,7 @@ import {
   restoreResumeLibrary,
 } from '../domain/resume-library'
 const SITE_URL = 'https://www.codeiy.com'
-const SITE_TITLE = 'Folio｜AI 简历修改与岗位定制，支持 PDF 导出'
+const SITE_TITLE = 'AI 简历定制：按岗位 JD 修改简历并导出 PDF｜Folio'
 const SITE_DESCRIPTION =
   '导入已有简历，粘贴岗位描述（JD），用对话调整经历重点。Folio 帮你保留原稿、整理独立投递版本，核对修改和待补充信息后导出 PDF。支持 PDF、DOCX 导入，提供免费 AI 额度。'
 const structuredData = {
@@ -97,7 +97,7 @@ const structuredData = {
         '简历模板与局部排版',
         '浏览器 A4 PDF 与 JSON 导出',
       ],
-      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
     },
     {
       '@type': 'FAQPage',
