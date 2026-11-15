@@ -1483,26 +1483,79 @@ test('退出账户时不把账户简历写入访客分区', async ({ page }) => 
   ).toBe('访客原稿')
 })
 
-test('国内落地页使用微信登录并发送微信 OAuth 请求', async ({ page }) => {
+test('国内首页在同一弹窗选择 GitHub 或邮箱，关闭后返回主按钮', async ({
+  page,
+}) => {
   await page.route('**/api/config', (route) =>
     route.fulfill({
-      json: { mode: 'live', market: 'cn', authConfigured: true },
+      json: {
+        mode: 'live',
+        market: 'cn',
+        authConfigured: true,
+        authMethods: { market: false, github: true, email: true },
+      },
     }),
   )
   await page.route('**/api/auth/sign-in/social', (route) =>
     route.fulfill({ status: 503, json: { message: '登录暂不可用' } }),
   )
   await page.goto('/')
-  await expect(page.locator('.landing-intro')).toContainText('使用微信登录')
+  const start = page
+    .locator('.landing-intro')
+    .getByRole('button', { name: '开始定制简历' })
+  await expect(
+    page.getByRole('button', { name: '使用 GitHub 登录' }),
+  ).toHaveCount(0)
+  await start.click()
+  const dialog = page.getByRole('dialog', { name: '登录 Folio' })
+  await expect(
+    dialog.getByRole('button', { name: '使用微信登录' }),
+  ).toHaveCount(0)
+  await dialog.getByRole('button', { name: '邮箱验证码登录' }).click()
+  await expect(dialog.getByRole('textbox', { name: '邮箱' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(start).toBeFocused()
+
+  await start.click()
   const request = page.waitForRequest('**/api/auth/sign-in/social')
+  await dialog.getByRole('button', { name: '使用 GitHub 登录' }).click()
+  expect((await request).postDataJSON()).toMatchObject({
+    provider: 'github',
+    callbackURL: '/auth/callback',
+    errorCallbackURL: '/?loginFailed=1',
+  })
+  await expect(dialog.getByRole('alert')).toContainText('登录暂不可用')
+
+  await page.goto('/?loginFailed=1&error=account_not_linked')
+  await expect(dialog.getByRole('alert')).toContainText('请使用原邮箱登录')
+  await expect(page).toHaveURL('/')
+})
+
+test('国内弹窗仅在启用时显示微信登录', async ({ page }) => {
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      json: {
+        mode: 'live',
+        market: 'cn',
+        authConfigured: true,
+        authMethods: { market: true, github: false, email: false },
+      },
+    }),
+  )
+  await page.route('**/api/auth/sign-in/social', (route) =>
+    route.fulfill({ status: 503, json: { message: '登录暂不可用' } }),
+  )
+  await page.goto('/')
   await page
     .locator('.landing-intro')
     .getByRole('button', { name: '开始定制简历' })
     .click()
+  const dialog = page.getByRole('dialog', { name: '登录 Folio' })
+  const request = page.waitForRequest('**/api/auth/sign-in/social')
+  await dialog.getByRole('button', { name: '使用微信登录' }).click()
   expect((await request).postDataJSON()).toMatchObject({
     provider: 'wechat',
     callbackURL: '/',
-    errorCallbackURL: '/?loginFailed=1',
   })
-  await expect(page.getByRole('alert')).toContainText('登录暂不可用')
 })

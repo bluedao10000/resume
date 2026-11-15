@@ -2515,3 +2515,16 @@ summary {
   border: 1px solid currentColor;
   border-radius: 0.375rem;
 }
+
+.login-methods {
+  display: grid;
+  gap: 10px;
+}
+.login-methods > button {
+  justify-content: center;
+  min-height: 44px;
+}
+.login-methods .landing-email-login {
+  max-width: none;
+  margin: 0;
+}
