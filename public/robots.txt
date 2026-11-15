@@ -2,4 +2,4 @@
 User-agent: *
 Disallow: /api/
 
-Sitemap: https://r.story2u.xyz/sitemap.xml
+Sitemap: https://www.codeiy.com/sitemap.xml

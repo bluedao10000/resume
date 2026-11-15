@@ -65,7 +65,7 @@ import {
   removeResume,
   restoreResumeLibrary,
 } from '../domain/resume-library'
-const SITE_URL = 'https://r.story2u.xyz'
+const SITE_URL = 'https://www.codeiy.com'
 const SITE_TITLE = 'Folio｜AI 简历修改与岗位定制，支持 PDF 导出'
 const SITE_DESCRIPTION =
   '导入已有简历，粘贴岗位描述（JD），用对话调整经历重点。Folio 帮你保留原稿、整理独立投递版本，核对修改和待补充信息后导出 PDF。支持 PDF、DOCX 导入，提供免费 AI 额度。'
