@@ -53,6 +53,10 @@ import {
   type AgentResult,
 } from '../domain/resume'
 import { authClient } from '../lib/auth-client'
+import {
+  clearPendingEmailLogin,
+  readPendingEmailLogin,
+} from '../lib/email-login-state'
 import { fetchSession } from '../server/session'
 import { exportJSON, loadResumes, saveResumes } from '../lib/storage'
 import {
@@ -192,6 +196,7 @@ function Entry() {
   const [loginBusy, setLoginBusy] = useState(false)
   const [loginError, setLoginError] = useState('')
   useEffect(() => {
+    if (readPendingEmailLogin()) setLoginOpen(true)
     const url = new URL(window.location.href)
     if (url.searchParams.has('loginFailed')) {
       setLoginOpen(true)
@@ -241,6 +246,9 @@ function Entry() {
       setLoginBusy(false)
     }
   }
+  useEffect(() => {
+    if (session) clearPendingEmailLogin()
+  }, [session])
   async function signOut() {
     const response = await authClient.signOut()
     if (response.error)
@@ -313,7 +321,13 @@ function Entry() {
           }
         />
         {loginOpen && usesLoginDialog ? (
-          <Modal title="登录 Folio" onClose={() => setLoginOpen(false)}>
+          <Modal
+            title="登录 Folio"
+            onClose={() => {
+              clearPendingEmailLogin()
+              setLoginOpen(false)
+            }}
+          >
             <LoginMethods
               social={social}
               email={email}

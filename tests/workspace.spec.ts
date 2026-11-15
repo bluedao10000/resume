@@ -1592,6 +1592,68 @@ test('国内首页在同一弹窗选择 GitHub 或邮箱，关闭后返回主按
   await expect(page).toHaveURL('/')
 })
 
+test('邮箱发码后切标签及刷新仍可输入验证码，且不重复发码', async ({ page }) => {
+  let sends = 0
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      json: {
+        mode: 'live',
+        market: 'cn',
+        authConfigured: true,
+        authMethods: { market: false, github: false, email: true },
+      },
+    }),
+  )
+  await page.route('**/api/auth/email-otp/send-verification-otp', (route) => {
+    sends++
+    return route.fulfill({ json: { success: true } })
+  })
+  await page.route('**/api/auth/sign-in/email-otp', (route) =>
+    route.fulfill({ json: { user: { id: 'fixture' } } }),
+  )
+  await page.route('**/auth/callback', (route) =>
+    route.fulfill({ body: '登录成功' }),
+  )
+
+  await page.goto('/')
+  await page
+    .locator('.landing-intro')
+    .getByRole('button', { name: '开始定制简历' })
+    .click()
+  const dialog = page.getByRole('dialog', { name: '登录 Folio' })
+  await dialog.getByRole('button', { name: '邮箱验证码登录' }).click()
+  await dialog
+    .getByRole('textbox', { name: '邮箱' })
+    .fill('Fixture@example.com')
+  await dialog.getByRole('button', { name: '发送验证码' }).click()
+  const code = dialog.getByRole('textbox', { name: '验证码' })
+  await expect(code).toBeVisible()
+  const otherTab = await page.context().newPage()
+  await otherTab.bringToFront()
+  await page.bringToFront()
+  await expect(code).toBeVisible()
+  await page.reload()
+  await expect(code).toBeFocused()
+  await expect(dialog.getByRole('textbox', { name: '邮箱' })).toHaveValue(
+    'fixture@example.com',
+  )
+  expect(sends).toBe(1)
+  await code.fill('012345')
+  const request = page.waitForRequest('**/api/auth/sign-in/email-otp')
+  await dialog.getByRole('button', { name: '验证并登录' }).click()
+  expect((await request).postDataJSON()).toMatchObject({
+    email: 'fixture@example.com',
+    otp: '012345',
+  })
+  await expect(page).toHaveURL('/auth/callback')
+  expect(
+    await page.evaluate(() =>
+      sessionStorage.getItem('folio:pending-email-login'),
+    ),
+  ).toBeNull()
+  await otherTab.close()
+})
+
 test('国内弹窗仅在启用时显示微信登录', async ({ page }) => {
   await page.route('**/api/config', (route) =>
     route.fulfill({

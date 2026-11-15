@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { EmailOtpLogin } from './EmailOtpLogin'
+import { readPendingEmailLogin } from '../lib/email-login-state'
 
 export type SocialProvider = 'github' | 'wechat' | 'google'
 
@@ -22,7 +23,9 @@ export function LoginMethods({
   error: string
   onLogin: (provider: SocialProvider) => void
 }) {
-  const [emailOpen, setEmailOpen] = useState(false)
+  const [emailOpen, setEmailOpen] = useState(
+    () => email && !!readPendingEmailLogin(),
+  )
   return (
     <div className="login-methods">
       {social.map((provider) => (

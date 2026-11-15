@@ -1,18 +1,27 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { authClient } from '../lib/auth-client'
+import {
+  clearPendingEmailLogin,
+  readPendingEmailLogin,
+  savePendingEmailLogin,
+} from '../lib/email-login-state'
 
 export function EmailOtpLogin() {
   const emailInput = useRef<HTMLInputElement>(null)
   const codeInput = useRef<HTMLInputElement>(null)
-  const [email, setEmail] = useState('')
+  const [pending] = useState(readPendingEmailLogin)
+  const [email, setEmail] = useState(pending?.email ?? '')
   const [otp, setOtp] = useState('')
-  const [sent, setSent] = useState(false)
+  const [sent, setSent] = useState(!!pending)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (sent) codeInput.current?.focus()
-    else emailInput.current?.focus()
+    const frame = requestAnimationFrame(() => {
+      const input = sent ? codeInput.current : emailInput.current
+      input?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
   }, [sent])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -22,6 +31,7 @@ export function EmailOtpLogin() {
     try {
       const address = email.trim().toLowerCase()
       if (!sent) {
+        const sentAt = Date.now()
         const result = await authClient.emailOtp.sendVerificationOtp({
           email: address,
           type: 'sign-in',
@@ -30,6 +40,8 @@ export function EmailOtpLogin() {
           setError('验证码发送失败，请稍后重试。')
           return
         }
+        savePendingEmailLogin(address, sentAt)
+        setEmail(address)
         setSent(true)
         return
       }
@@ -39,6 +51,7 @@ export function EmailOtpLogin() {
         setError('验证码校验失败，请检查验证码或重新发送。')
         return
       }
+      clearPendingEmailLogin()
       window.location.assign('/auth/callback')
     } catch {
       setError('无法连接登录服务，请重试。')
@@ -89,6 +102,7 @@ export function EmailOtpLogin() {
             className="outline-button"
             disabled={busy}
             onClick={() => {
+              clearPendingEmailLogin()
               setSent(false)
               setOtp('')
               setError('')
