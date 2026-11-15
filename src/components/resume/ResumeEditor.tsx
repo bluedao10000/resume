@@ -40,7 +40,7 @@ export function ResumeEditor({
       <RichTextEditor
         label="专业技能"
         value={listMarkdown(resume.skills)}
-        maxItems={30}
+        maxListItems={30}
         onChange={(value) =>
           onChange({ ...resume, skills: markdownItems(value) })
         }
@@ -66,7 +66,7 @@ export function ResumeEditor({
           ))}
           <RichTextEditor
             label={`工作要点 ${i + 1}`}
-            maxItems={12}
+            maxListItems={12}
             value={listMarkdown(job.bullets)}
             onChange={(value) =>
               onChange({
