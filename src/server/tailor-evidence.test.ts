@@ -4,6 +4,9 @@ import { executeResumeTool } from './resume-tools'
 
 const order = '维护 Java 订单查询与状态变更接口，补充参数校验与错误处理。'
 const reconcile = '用 Go 编写批处理程序，读取业务记录并输出差异清单。'
+const safeOrder =
+  '维护 **Java 订单查询与状态变更接口**，补充参数校验和错误处理。'
+const safeReconcile = '使用 **Go** 编写批处理程序，读取业务记录，输出差异清单。'
 const backend: Resume = {
   ...emptyResume,
   id: 'fictional-backend',
@@ -23,6 +26,8 @@ const backend: Resume = {
 const publish = '与设计协作制作物料，跟进发布和评论反馈。'
 const community = '汇总社群问题，分类后反馈产品与客服。'
 const review = '使用 Excel 汇总阅读、报名和问卷数据并参与复盘。'
+const safePublish = '与设计协作制作物料，**跟进发布与评论反馈**。'
+const safeReview = '用 **Excel** 汇总阅读、报名和问卷数据并参与复盘。'
 const operations: Resume = {
   ...emptyResume,
   id: 'fictional-operations',
@@ -47,37 +52,37 @@ describe('Folio 模拟报告的定制稿事实边界', () => {
       source: backend,
       jd: '业务后端开发，Java、MySQL、Redis、接口设计与异常排查。',
       summary: '负责接口设计与异常处理。',
-      bullets: [order],
+      bullets: [safeOrder],
       claims: ['接口设计'],
-      retained: order,
+      retained: safeOrder,
     },
     {
       id: 'B2',
       source: backend,
       jd: 'Go 平台工程师，分布式任务调度、Kafka、Kubernetes。',
-      bullets: [reconcile, '用 Go 编写单机批处理程序，支持人工重跑。'],
+      bullets: [safeReconcile, '用 Go 编写单机批处理程序，支持人工重跑。'],
       claims: ['单机批处理'],
-      retained: reconcile,
+      retained: safeReconcile,
     },
     {
       id: 'C1',
       source: operations,
       jd: '内容运营，要求选题策划、发布排期与内容效果复盘。',
-      bullets: ['负责发布排期，按活动节点推进发布节奏。', publish],
+      bullets: ['负责发布排期，按活动节点推进发布节奏。', safePublish],
       claims: ['发布排期', '发布节奏'],
-      retained: publish,
+      retained: safePublish,
     },
     {
       id: 'C2',
       source: operations,
       jd: '增长运营，用户分层、漏斗、SQL，解释活动对留存的贡献。',
       bullets: [
-        review,
+        safeReview,
         '用数据复盘结果优化后续通知。',
         '用社群问题指导活动通知文案。',
       ],
       claims: ['优化后续通知', '指导活动通知文案'],
-      retained: review,
+      retained: safeReview,
     },
   ])(
     '$id keeps supported evidence and moves proposed claims to the review card',
@@ -89,7 +94,8 @@ describe('Folio 模拟报告的定制稿事实边界', () => {
           resume: {
             ...source,
             label: `岗位稿 ${id}`,
-            summary: summary ?? source.summary,
+            summary: summary ?? `**${source.summary}**`,
+            skills: source.skills.map((skill) => `**${skill}**`),
             experience: [{ ...source.experience[0], bullets }],
           },
           missing: ['岗位要求待核对'],
@@ -111,6 +117,14 @@ describe('Folio 模拟报告的定制稿事实边界', () => {
         )
       }
       expect(result.missing).toContain('岗位要求待核对')
+      expect(result.missing).not.toContain(expect.stringContaining(retained))
+      expect(result.missing).toHaveLength(2 + Number(id === 'C2'))
+      expect(result.resume.summary).toBe(
+        summary ? source.summary : `**${source.summary}**`,
+      )
+      expect(result.resume.skills).toEqual(
+        source.skills.map((skill) => `**${skill}**`),
+      )
       expect(result.resume.experience[0].bullets[0]).toBe(retained)
       expect(result.resume.experience[0].bullets).toHaveLength(
         source.experience[0].bullets.length,
@@ -121,6 +135,47 @@ describe('Folio 模拟报告的定制稿事实边界', () => {
       expect(source).toEqual(before)
     },
   )
+
+  it('keeps negation, numbers, and link targets material while allowing equivalent prose', () => {
+    const source = {
+      ...backend,
+      experience: [
+        {
+          ...backend.experience[0],
+          bullets: [
+            '未主导接口设计。',
+            '处理 10 条记录。',
+            '维护 [接口文档](https://example.com/original)。',
+          ],
+        },
+      ],
+    }
+    const safeSummary = '参与维护**现有微服务**。'
+    const unsafe = [
+      '主导接口设计。',
+      '处理 **100** 条记录。',
+      '维护 [接口文档](https://example.com/other)。',
+    ]
+    const result = executeResumeTool(
+      'resume_update',
+      {
+        resume: {
+          ...source,
+          summary: safeSummary,
+          experience: [{ ...source.experience[0], bullets: unsafe }],
+        },
+      },
+      AgentRequestSchema.parse({
+        intent: 'tailor',
+        resume: source,
+        text: '定制 JD',
+      }),
+    )
+    expect(result.resume.summary).toBe(safeSummary)
+    expect(result.resume.experience).toEqual(source.experience)
+    expect(result.missing).toHaveLength(unsafe.length)
+    for (const text of unsafe) expect(result.missing.join(' ')).toContain(text)
+  })
 
   it('keeps facts attached to their original job and preserves duplicate original bullets', () => {
     const first = { ...backend.experience[0], bullets: [order, order] }
