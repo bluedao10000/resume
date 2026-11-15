@@ -1,3 +1,4 @@
+import type { Editor } from '@tiptap/react'
 import { test, expect, type Page, type Locator } from '@playwright/test'
 import { AgentRequestSchema, demoAgent } from '../src/domain/resume'
 const limits = {
@@ -259,6 +260,28 @@ test('连续输入技能和工作要点不重排光标或丢失字符', async ({
   await expect(page.locator('.preview-panel .resume-skills')).toContainText(
     'Distributed systems',
   )
+})
+
+test('编辑列表前面的条目时光标保持原位', async ({ page }) => {
+  await workspace(page)
+  expect(new URL(page.url()).hostname).toBe('localhost')
+  await page.getByRole('button', { name: '编辑内容' }).click()
+  for (const label of ['专业技能', '工作要点 1']) {
+    const editor = page.getByRole('textbox', { name: label, exact: true })
+    await paste(editor, '<ul><li>Alpha</li><li>Omega</li></ul>')
+    await editor.focus()
+    await editor.evaluate((element) => {
+      const tiptap = (element as HTMLElement & { editor: Editor }).editor
+      const paragraph = element.querySelector('li p')!
+      const end = tiptap.view.posAtDOM(paragraph, paragraph.childNodes.length)
+      tiptap.commands.setTextSelection(end)
+    })
+    await page.keyboard.press('Enter')
+    await expect(editor.locator('li')).toHaveText(['Alpha', '', 'Omega'])
+    await page.keyboard.press('ArrowLeft')
+    await page.keyboard.type('XY', { delay: 100 })
+    await expect(editor.locator('li')).toHaveText(['AlphaXY', '', 'Omega'])
+  }
 })
 
 test('PDF 剪贴板的预格式换行、文本项目符号和字体强调保留到工作预览', async ({

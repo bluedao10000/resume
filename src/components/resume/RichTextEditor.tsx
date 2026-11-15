@@ -14,25 +14,25 @@ import {
 } from 'lucide-react'
 import { clipboardHtml } from '../../lib/clipboard-html'
 import { safeHtml } from '../../lib/html-to-markdown'
-import { markdownItems } from '../../domain/rich-text'
+import { listMarkdown, markdownItems } from '../../domain/rich-text'
 
 export function RichTextEditor({
   label,
   value,
   onChange,
   maxLength = 20000,
-  maxItems,
+  maxListItems,
   disabled = false,
 }: {
   label: string
   value: string
   onChange: (value: string) => void
   maxLength?: number
-  maxItems?: number
+  maxListItems?: number
   disabled?: boolean
 }) {
-  const current = useRef({ onChange, maxLength, maxItems, value })
-  current.current = { onChange, maxLength, maxItems, value }
+  const current = useRef({ onChange, maxLength, maxListItems, value })
+  current.current = { onChange, maxLength, maxListItems, value }
   const [, setRevision] = useState(0)
   const [error, setError] = useState('')
   const plainPaste = useRef(false)
@@ -115,10 +115,12 @@ export function RichTextEditor({
         return
       }
       if (
-        current.current.maxItems &&
-        markdownItems(markdown).length > current.current.maxItems
+        current.current.maxListItems &&
+        markdownItems(markdown).length > current.current.maxListItems
       ) {
-        setError(`最多保留 ${current.current.maxItems} 条，请合并相关内容。`)
+        setError(
+          `最多保留 ${current.current.maxListItems} 条，请合并相关内容。`,
+        )
         editor.commands.setContent(current.current.value, {
           contentType: 'markdown',
           emitUpdate: false,
@@ -131,12 +133,21 @@ export function RichTextEditor({
     },
   })
   useEffect(() => {
-    if (editor && editor.getMarkdown() !== value)
-      editor.commands.setContent(value, {
-        contentType: 'markdown',
-        emitUpdate: false,
-      })
-  }, [editor, value])
+    if (!editor) return
+    const markdown = editor.getMarkdown()
+    if (markdown === value) return
+    // List fields round-trip through the stored items. Compare that value so
+    // saving a local edit does not replace the document and move the caret.
+    if (
+      maxListItems !== undefined &&
+      listMarkdown(markdownItems(markdown)) === value
+    )
+      return
+    editor.commands.setContent(value, {
+      contentType: 'markdown',
+      emitUpdate: false,
+    })
+  }, [editor, maxListItems, value])
   useEffect(() => {
     editor?.setEditable(!disabled)
   }, [disabled, editor])
