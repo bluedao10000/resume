@@ -106,6 +106,8 @@ npm run db:migrate:remote
 npm run deploy
 ```
 
+国内站在本机通过 `cf-codeiy` 载入 Cloudflare 凭据，然后运行 `npm run deploy`。该分支无 GitHub Actions 工作流。
+
 `npm run deploy` 构建后，按白名单将 `BETTER_AUTH_SECRET`、`GOOGLE_CLIENT_ID`、`GOOGLE_CLIENT_SECRET`、`AI_API_KEY` 同步为 Worker Secrets，再部署 `dist/server/wrangler.json`。Cloudflare 部署凭据不会同步到运行时。非敏感运行参数进入 vars，自定义域名由 Wrangler custom domain route 绑定。
 
 Cloudflare Vite 插件生成 `dist/server/wrangler.json`，内含 Worker 入口和 `../client` 静态资源目录；Wrangler 使用插件生成的构建配置。不要手工维护第二个 Worker，也不要把仓库根目录作为 assets 发布。部署脚本会立即发布变化，当前没有分阶段发布流程。
