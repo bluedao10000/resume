@@ -1050,6 +1050,61 @@ test('已有完全重复副本可清理和撤销，保留不同投递版本并�
   ).toEqual([sampleResume.id, 'distinct-version'])
   expect(agentRequests).toBe(0)
 })
+test('同一底稿的两份岗位稿在切换和刷新后恢复各自的核对卡', async ({ page }) => {
+  const { sampleResume } = await import('../src/domain/resume')
+  const requests: string[] = []
+  await page.route('**/api/agent', (route) => {
+    const input = AgentRequestSchema.parse(route.request().postDataJSON())
+    requests.push(input.resume.id)
+    const role = input.text.includes('岗位 A') ? 'A' : 'B'
+    const result = demoAgent(input)
+    return route.fulfill({
+      json: {
+        ...result,
+        resume: { ...result.resume, label: `岗位稿 ${role}` },
+        changes: [`调整 ${role} 岗位的经历顺序`],
+        missing: [`待确认 ${role} 岗位的职责`],
+      },
+    })
+  })
+
+  await openWorkspace(page)
+  const recent = page.locator('.recent-list')
+  const card = page.locator('.chat-panel .change-card')
+  async function selectVersion(role: 'A' | 'B') {
+    await recent
+      .getByRole('button', { name: new RegExp(`岗位稿 ${role}`) })
+      .click()
+  }
+  async function expectCard(role: 'A' | 'B') {
+    await expect(card).toBeVisible()
+    const other = role === 'A' ? 'B' : 'A'
+    await expect(card).toContainText(`待确认 ${role} 岗位的职责`)
+    await expect(card).not.toContainText(`待确认 ${other} 岗位的职责`)
+    await card.getByText('本次草稿更新', { exact: true }).click()
+    await expect(card.getByText(`调整 ${role} 岗位的经历顺序`)).toBeVisible()
+  }
+  for (const role of ['A', 'B'] as const) {
+    await recent.getByRole('button', { name: '示例简历', exact: true }).click()
+    await page.getByRole('button', { name: '按 JD 定制', exact: true }).click()
+    await page
+      .getByRole('textbox', { name: '岗位描述（JD）' })
+      .fill(`岗位 ${role} 的 JD`)
+    await page.getByRole('button', { name: '生成定制草稿' }).click()
+    await expect(card).toContainText(`待确认 ${role} 岗位的职责`)
+  }
+  await selectVersion('A')
+  await expectCard('A')
+  await page.reload()
+  await expectCard('A')
+  await selectVersion('B')
+  await expectCard('B')
+  await page.reload()
+  await expectCard('B')
+  await expect(page.locator('.nav-count')).toHaveText('3')
+  expect(requests).toEqual([sampleResume.id, sampleResume.id])
+})
+
 test('连续对话更新当前简历，JD 才新增，继续修改定制版不复制且刷新保留', async ({
   page,
 }) => {

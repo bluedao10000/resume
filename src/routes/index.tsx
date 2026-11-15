@@ -380,7 +380,6 @@ function Workspace({
     null,
   )
   const [busy, setBusy] = useState(false)
-  const [result, setResult] = useState<AgentResult | null>(null)
   const [deleteRequest, setDeleteRequest] = useState<
     { kind: 'resume'; id: string } | { kind: 'duplicates' } | null
   >(null)
@@ -403,6 +402,8 @@ function Workspace({
   const activeThread = chats?.threads.find(
     (thread) => thread.id === chats.activeId,
   )
+  const result =
+    activeThread?.result?.resume.id === resume.id ? activeThread.result : null
   const deleteTarget =
     deleteRequest?.kind === 'resume'
       ? resumes.find((item) => item.id === deleteRequest.id)
@@ -452,7 +453,6 @@ function Workspace({
       }
       setChats(chatStore)
       setSelected(selectedId)
-      setResult(active?.result ?? null)
       setIntent(saved.length ? 'polish' : 'import')
       setStorageFailure(false)
     } catch (e) {
@@ -501,7 +501,6 @@ function Workspace({
         setLibraryBackup(null)
         setDeleteRequest(null)
         setCommand(null)
-        setResult(null)
         setBusy(false)
         setChatKey((n) => n + 1)
         setPanel('preview')
@@ -558,7 +557,6 @@ function Workspace({
   function onResult(r: AgentResult) {
     if (scopeRef.current !== scope) return
     if (!r.applied) {
-      setResult(null)
       setIntent(hasResume ? 'polish' : 'import')
       setChats((store) =>
         store
@@ -580,7 +578,6 @@ function Workspace({
         : [r.resume, ...items],
     )
     setSelected(r.resume.id)
-    setResult(r)
     setIntent('polish')
     setPanel('preview')
     setChats((store) =>
@@ -634,7 +631,6 @@ function Workspace({
       activeId: thread.id,
       threads: existing ? store!.threads : [thread, ...(store?.threads ?? [])],
     }))
-    setResult(thread.result)
     setCommand(null)
     setChatKey((key) => key + 1)
   }
@@ -672,7 +668,6 @@ function Workspace({
     setSelected(r.id)
     activateChat(r.id)
     setCommand(null)
-    setResult(null)
     setIntent('polish')
     setView('chat')
     setPanel('preview')
@@ -708,7 +703,6 @@ function Workspace({
     setResumes(remaining.resumes)
     setSelected(remaining.selectedId)
     setCommand(null)
-    setResult(null)
     if (id === resume.id) {
       activateChat(remaining.selectedId || null)
     }
@@ -722,7 +716,6 @@ function Workspace({
     setSelected(libraryBackup.selectedBefore)
     setIntent(libraryBackup.before.length ? 'polish' : 'import')
     setLibraryBackup(null)
-    setResult(null)
     setCommand(null)
     setNotice(`已${undoLabel}。`)
   }
@@ -751,7 +744,6 @@ function Workspace({
         activateChat(r.id)
         setIntent('polish')
         setCommand(null)
-        setResult(null)
         setPanel('preview')
         setModal(null)
         setNotice('简历 JSON 已导入。')
@@ -786,7 +778,6 @@ function Workspace({
             }))
             setChatKey((k) => k + 1)
             setCommand(null)
-            setResult(null)
             setIntent(hasResume ? 'polish' : 'import')
             setView('chat')
             setMobile('chat')
