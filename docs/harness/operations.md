@@ -224,7 +224,7 @@ npm run deploy
 ### codeiy 国内站部署
 
 2026-11-14 发布到 `codeiy-main-site`。主站为 `https://www.codeiy.com`，根域名
-`https://codeiy.com` 也绑定同一 Worker。live 首页会跳到主站，OAuth 发起和回调都在主站完成。通过 `cf-codeiy` 选择 Cloudflare 账号。
+`https://codeiy.com` 也绑定同一 Worker。live 首页的 GET 和 HEAD 请求使用 308 永久跳转到主站，并保留查询参数。OAuth 发起和回调都在主站完成。通过 `cf-codeiy` 选择 Cloudflare 账号。
 国内站从 `cn` 分支独立部署，`cn` 不再合并到 `main`。首页 canonical、`robots.txt`、`sitemap.xml` 和 `llms.txt` 使用 `https://www.codeiy.com`。`public/_headers` 为 `llms.txt` 声明 UTF-8。
 
 在部署用 `.env` 中填写以下非敏感参数，其余字段以 `.env.example` 为基础。

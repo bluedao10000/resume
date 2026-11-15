@@ -11,14 +11,14 @@ export default {
     const url = new URL(request.url)
     if (
       config.APP_MODE === 'live' &&
-      request.method === 'GET' &&
+      (request.method === 'GET' || request.method === 'HEAD') &&
       url.pathname === '/'
     ) {
       const origin = new URL(config.BETTER_AUTH_URL).origin
       if (url.origin !== origin)
         return Response.redirect(
           new URL(url.pathname + url.search, origin),
-          302,
+          308,
         )
     }
     return server.fetch(request)
