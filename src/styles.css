@@ -2491,3 +2491,21 @@ summary {
     flex-wrap: wrap;
   }
 }
+
+.landing-email-login {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 24rem;
+  margin: 1rem 0;
+}
+
+.landing-email-login label {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.landing-email-login input {
+  padding: 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 0.375rem;
+}

@@ -147,11 +147,11 @@ test('用量读取失败可重试，不显示错误套餐', async ({ page }) => 
 test('国内套餐显示人民币，扫码订单可恢复，查单后刷新权益', async ({ page }) => {
   const cnPlans = catalog.map((plan, i) => ({
     ...plan,
-    monthlyCents: [0, 6800, 32800][i],
+    monthlyCents: [0, 2000, 9900][i],
   }))
   const order = {
     plan: 'plus',
-    totalFen: 6800,
+    totalFen: 2000,
     expiresAt: Date.now() + 15 * 60000,
     qr: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aX3cAAAAASUVORK5CYII=',
   }
@@ -188,7 +188,7 @@ test('国内套餐显示人民币，扫码订单可恢复，查单后刷新权�
   await page.goto('/?billing=success')
   const panel = page.getByRole('dialog', { name: '套餐与用量' })
   await expect(panel.getByRole('region', { name: 'Plus 套餐' })).toContainText(
-    '¥68',
+    '¥20',
   )
   await panel.getByRole('button', { name: '微信支付购买 Plus' }).click()
   await expect(panel.getByRole('img', { name: '微信支付二维码' })).toBeVisible()

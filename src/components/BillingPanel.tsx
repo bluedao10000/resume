@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { z } from 'zod'
+import { AlipayPurchase } from './AlipayPurchase'
 import { BillingSummarySchema, type BillingSummary } from '../domain/billing'
 
 const publicPlans = z.array(
@@ -225,6 +226,13 @@ export function BillingPanel({
           ) : null}
         </section>
       ) : null}
+      {china && signedIn && summary?.alipayConfigured && (
+        <AlipayPurchase
+          plans={catalog}
+          canBuy={summary.plan === 'free' && !order}
+          onUpdate={() => void load()}
+        />
+      )}
       <div className="billing-plans">
         {catalog.map((plan) => (
           <section
@@ -253,7 +261,9 @@ export function BillingPanel({
               <span className="billing-current">当前套餐</span>
             ) : plan.id === 'free' ? (
               <span className="billing-current">免费使用</span>
-            ) : (
+            ) : !china ||
+              !summary?.alipayConfigured ||
+              summary.paymentConfigured ? (
               <button
                 type="button"
                 className="billing-button"
@@ -283,17 +293,16 @@ export function BillingPanel({
                         ? `微信支付购买 ${plan.name}`
                         : `升级到 ${plan.name}`}
               </button>
-            )}
+            ) : null}
           </section>
         ))}
       </div>
       {china ? (
         <p className="field-hint">
-          付费套餐一次购买，有效期 30 天，到期回到
-          Free。请使用另一台设备显示支付二维码。
+          付费套餐一次购买，有效期 30 天，到期回到 Free。
         </p>
       ) : null}
-      {summary && !summary.paymentConfigured ? (
+      {summary && !summary.paymentConfigured && !summary.alipayConfigured ? (
         <p className="field-hint">在线支付尚未开通，当前可使用 Free 套餐。</p>
       ) : null}
       {summary?.canManage ? (

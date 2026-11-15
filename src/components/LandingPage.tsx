@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ArrowRight, FileText, MessageSquare } from 'lucide-react'
+import { EmailOtpLogin } from './EmailOtpLogin'
 import { ResumeDocument } from './resume/ResumeDocument'
 import { sampleResume } from '../domain/resume'
 import { trackLandingEvent } from '../lib/track'
@@ -84,6 +85,8 @@ export function LandingPage({
   error,
   onLogin,
   onDemo,
+  onGithub,
+  emailLogin,
 }: {
   ready: boolean
   canLogin: boolean
@@ -92,7 +95,10 @@ export function LandingPage({
   error: string
   onLogin: () => void
   onDemo?: () => void
+  onGithub?: () => void
+  emailLogin?: boolean
 }) {
+  const [emailOpen, setEmailOpen] = useState(false)
   // Count only visitors who actually resolved to the signed-out landing page.
   useEffect(() => {
     if (ready) trackLandingEvent('landing_view')
@@ -150,6 +156,24 @@ export function LandingPage({
                 <ArrowRight size={16} aria-hidden="true" />
               </button>
             ) : null}
+            {onGithub && (
+              <button
+                className="outline-button"
+                onClick={onGithub}
+                disabled={isLoading}
+              >
+                使用 GitHub 登录
+              </button>
+            )}
+            {emailLogin && (
+              <button
+                className="outline-button"
+                aria-expanded={emailOpen}
+                onClick={() => setEmailOpen((open) => !open)}
+              >
+                邮箱验证码登录
+              </button>
+            )}
             {ready && onDemo ? (
               <button
                 className={canLogin ? 'outline-button' : 'primary-button'}
@@ -171,12 +195,13 @@ export function LandingPage({
               使用{loginProvider}登录。提供免费 AI 额度，按实际用量消耗。
             </p>
           ) : null}
+          {emailLogin && emailOpen && <EmailOtpLogin />}
           {error ? (
             <p className="landing-error" role="alert">
               {error}
             </p>
           ) : null}
-          {ready && !canLogin && !onDemo ? (
+          {ready && !canLogin && !onGithub && !emailLogin && !onDemo ? (
             <p role="status">登录暂不可用，请稍后重试。</p>
           ) : null}
         </section>

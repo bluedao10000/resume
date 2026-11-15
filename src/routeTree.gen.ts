@@ -13,11 +13,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAgentRouteImport } from './routes/api/agent'
 import { Route as ApiConfigRouteImport } from './routes/api/config'
 import { Route as ApiEventsRouteImport } from './routes/api/events'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as BillingAlipayReturnRouteImport } from './routes/billing/alipay-return'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingIndexRouteImport } from './routes/api/billing/index'
 import { Route as ApiBillingCheckoutRouteImport } from './routes/api/billing/checkout'
 import { Route as ApiBillingPortalRouteImport } from './routes/api/billing/portal'
 import { Route as ApiBillingWebhookRouteImport } from './routes/api/billing/webhook'
+import { Route as ApiBillingAlipayIndexRouteImport } from './routes/api/billing/alipay/index'
+import { Route as ApiBillingAlipayNotifyRouteImport } from './routes/api/billing/alipay/notify'
+import { Route as ApiBillingAlipayRefundRouteImport } from './routes/api/billing/alipay/refund'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -37,6 +42,16 @@ const ApiConfigRoute = ApiConfigRouteImport.update({
 const ApiEventsRoute = ApiEventsRouteImport.update({
   id: '/api/events',
   path: '/api/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillingAlipayReturnRoute = BillingAlipayReturnRouteImport.update({
+  id: '/billing/alipay-return',
+  path: '/billing/alipay-return',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
@@ -64,28 +79,53 @@ const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
   path: '/api/billing/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiBillingAlipayIndexRoute = ApiBillingAlipayIndexRouteImport.update({
+  id: '/api/billing/alipay/',
+  path: '/api/billing/alipay/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingAlipayNotifyRoute = ApiBillingAlipayNotifyRouteImport.update({
+  id: '/api/billing/alipay/notify',
+  path: '/api/billing/alipay/notify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBillingAlipayRefundRoute = ApiBillingAlipayRefundRouteImport.update({
+  id: '/api/billing/alipay/refund',
+  path: '/api/billing/alipay/refund',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
   '/api/events': typeof ApiEventsRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/billing/alipay-return': typeof BillingAlipayReturnRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/billing/': typeof ApiBillingIndexRoute
+  '/api/billing/alipay/notify': typeof ApiBillingAlipayNotifyRoute
+  '/api/billing/alipay/refund': typeof ApiBillingAlipayRefundRoute
+  '/api/billing/alipay/': typeof ApiBillingAlipayIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
   '/api/events': typeof ApiEventsRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/billing/alipay-return': typeof BillingAlipayReturnRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/billing': typeof ApiBillingIndexRoute
+  '/api/billing/alipay/notify': typeof ApiBillingAlipayNotifyRoute
+  '/api/billing/alipay/refund': typeof ApiBillingAlipayRefundRoute
+  '/api/billing/alipay': typeof ApiBillingAlipayIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -93,11 +133,16 @@ export interface FileRoutesById {
   '/api/agent': typeof ApiAgentRoute
   '/api/config': typeof ApiConfigRoute
   '/api/events': typeof ApiEventsRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/billing/alipay-return': typeof BillingAlipayReturnRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
   '/api/billing/portal': typeof ApiBillingPortalRoute
   '/api/billing/webhook': typeof ApiBillingWebhookRoute
   '/api/billing/': typeof ApiBillingIndexRoute
+  '/api/billing/alipay/notify': typeof ApiBillingAlipayNotifyRoute
+  '/api/billing/alipay/refund': typeof ApiBillingAlipayRefundRoute
+  '/api/billing/alipay/': typeof ApiBillingAlipayIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,33 +151,48 @@ export interface FileRouteTypes {
     | '/api/agent'
     | '/api/config'
     | '/api/events'
+    | '/auth/callback'
+    | '/billing/alipay-return'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/billing/webhook'
     | '/api/billing/'
+    | '/api/billing/alipay/notify'
+    | '/api/billing/alipay/refund'
+    | '/api/billing/alipay/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/api/agent'
     | '/api/config'
     | '/api/events'
+    | '/auth/callback'
+    | '/billing/alipay-return'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/billing/webhook'
     | '/api/billing'
+    | '/api/billing/alipay/notify'
+    | '/api/billing/alipay/refund'
+    | '/api/billing/alipay'
   id:
     | '__root__'
     | '/'
     | '/api/agent'
     | '/api/config'
     | '/api/events'
+    | '/auth/callback'
+    | '/billing/alipay-return'
     | '/api/auth/$'
     | '/api/billing/checkout'
     | '/api/billing/portal'
     | '/api/billing/webhook'
     | '/api/billing/'
+    | '/api/billing/alipay/notify'
+    | '/api/billing/alipay/refund'
+    | '/api/billing/alipay/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -140,11 +200,16 @@ export interface RootRouteChildren {
   ApiAgentRoute: typeof ApiAgentRoute
   ApiConfigRoute: typeof ApiConfigRoute
   ApiEventsRoute: typeof ApiEventsRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  BillingAlipayReturnRoute: typeof BillingAlipayReturnRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
   ApiBillingPortalRoute: typeof ApiBillingPortalRoute
   ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute
   ApiBillingIndexRoute: typeof ApiBillingIndexRoute
+  ApiBillingAlipayNotifyRoute: typeof ApiBillingAlipayNotifyRoute
+  ApiBillingAlipayRefundRoute: typeof ApiBillingAlipayRefundRoute
+  ApiBillingAlipayIndexRoute: typeof ApiBillingAlipayIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -175,6 +240,20 @@ declare module '@tanstack/react-router' {
       path: '/api/events'
       fullPath: '/api/events'
       preLoaderRoute: typeof ApiEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/billing/alipay-return': {
+      id: '/billing/alipay-return'
+      path: '/billing/alipay-return'
+      fullPath: '/billing/alipay-return'
+      preLoaderRoute: typeof BillingAlipayReturnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/auth/$': {
@@ -212,6 +291,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/billing/alipay/': {
+      id: '/api/billing/alipay/'
+      path: '/api/billing/alipay'
+      fullPath: '/api/billing/alipay/'
+      preLoaderRoute: typeof ApiBillingAlipayIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/alipay/notify': {
+      id: '/api/billing/alipay/notify'
+      path: '/api/billing/alipay/notify'
+      fullPath: '/api/billing/alipay/notify'
+      preLoaderRoute: typeof ApiBillingAlipayNotifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/billing/alipay/refund': {
+      id: '/api/billing/alipay/refund'
+      path: '/api/billing/alipay/refund'
+      fullPath: '/api/billing/alipay/refund'
+      preLoaderRoute: typeof ApiBillingAlipayRefundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -220,11 +320,16 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAgentRoute: ApiAgentRoute,
   ApiConfigRoute: ApiConfigRoute,
   ApiEventsRoute: ApiEventsRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  BillingAlipayReturnRoute: BillingAlipayReturnRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
   ApiBillingPortalRoute: ApiBillingPortalRoute,
   ApiBillingWebhookRoute: ApiBillingWebhookRoute,
   ApiBillingIndexRoute: ApiBillingIndexRoute,
+  ApiBillingAlipayNotifyRoute: ApiBillingAlipayNotifyRoute,
+  ApiBillingAlipayRefundRoute: ApiBillingAlipayRefundRoute,
+  ApiBillingAlipayIndexRoute: ApiBillingAlipayIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

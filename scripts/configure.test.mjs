@@ -13,6 +13,10 @@ test('generated configuration excludes credentials and declares allowed secrets'
     CLOUDFLARE_API_TOKEN: 'cf-secret-fixture',
     GOOGLE_CLIENT_SECRET: 'google-secret-fixture',
     WECHAT_APP_SECRET: 'wechat-login-secret-fixture',
+    GITHUB_CLIENT_ID: 'github-client-fixture',
+    GITHUB_CLIENT_SECRET: 'github-secret-fixture',
+    AUTH_RESEND_API_KEY: 'mail-secret-fixture',
+    AUTH_EMAIL_FROM: 'login@example.com',
     STRIPE_SECRET_KEY: 'stripe-secret-fixture',
     STRIPE_WEBHOOK_SECRET: 'webhook-secret-fixture',
   })
@@ -23,6 +27,8 @@ test('generated configuration excludes credentials and declares allowed secrets'
     'BETTER_AUTH_SECRET',
     'GOOGLE_CLIENT_SECRET',
     'WECHAT_APP_SECRET',
+    'GITHUB_CLIENT_SECRET',
+    'AUTH_RESEND_API_KEY',
     'CLOUDFLARE_API_TOKEN',
     'STRIPE_SECRET_KEY',
     'STRIPE_WEBHOOK_SECRET',
@@ -30,6 +36,10 @@ test('generated configuration excludes credentials and declares allowed secrets'
     assert.ok(!serialized.includes(config[key]))
   assert.ok(worker.secrets.required.includes('AI_API_KEY'))
   assert.ok(worker.secrets.required.includes('WECHAT_APP_SECRET'))
+  assert.ok(worker.secrets.required.includes('GITHUB_CLIENT_SECRET'))
+  assert.ok(worker.secrets.required.includes('AUTH_RESEND_API_KEY'))
+  assert.equal(worker.vars.GITHUB_CLIENT_ID, config.GITHUB_CLIENT_ID)
+  assert.equal(worker.vars.AUTH_EMAIL_FROM, config.AUTH_EMAIL_FROM)
   assert.ok(!worker.secrets.required.includes('STRIPE_SECRET_KEY'))
   assert.ok(!worker.secrets.required.includes('CLOUDFLARE_API_TOKEN'))
   assert.equal(worker.main, './src/worker.ts')

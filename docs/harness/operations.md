@@ -221,7 +221,7 @@ npm run deploy
 ### codeiy 国内演示部署
 
 2026-11-14 发布到 `codeiy-main-site`。主站为 `https://www.codeiy.com`，根域名
-`https://codeiy.com` 也绑定同一 Worker。通过 `cf-codeiy` 选择 Cloudflare 账号。
+`https://codeiy.com` 也绑定同一 Worker。live 首页会跳到主站，OAuth 发起和回调都在主站完成。通过 `cf-codeiy` 选择 Cloudflare 账号。
 在部署用 `.env` 中填写以下非敏感参数，其余字段以 `.env.example` 为基础。
 重新发布前，使用同一环境的 Better Auth secret。
 
@@ -243,3 +243,26 @@ npm run deploy
 国内版通用模型、费率和运行限制由 `src/config/runtime-defaults.mjs` 提供。
 `.env` 只需配置环境差异，可显式覆盖默认值。Worker 公共变量只同步非默认配置和当前市场的有效字段。
 国内版默认通过 Responses 接口调用 `deepseek-flash`。启用 `APP_MODE=live` 前需填好微信网站应用 AppID 和 AppSecret。
+
+## 邮箱验证码和 GitHub 登录
+
+两种方式都通过 Better Auth 登录，工作台和计费接口继续读取同一个会话里的 `user.id`。任一市场均可启用这两种方式。配置完整后对应按钮会出现在落地页。
+
+- 邮箱验证码。验证 Resend 发件域名，在 `.env` 设置仅具发信权限的 `AUTH_RESEND_API_KEY` 和已验证域名下的 `AUTH_EMAIL_FROM`。执行 `npm run db:migrate:local` 与 `npm run dev`，从落地页发送验证码，收信后输入六位验证码并验证登录。首次验证由 Better Auth 创建账号。退出后用相同邮箱登录，核对仍进入同一账户。错误或过期码应停留在登录页。
+- GitHub。到 GitHub → Settings → Developer settings → OAuth Apps 创建 OAuth App。生产回调 URL 使用 `BETTER_AUTH_URL` 的域名，Folio 当前为 `https://www.codeiy.com/api/auth/callback/github`。本地另建应用，回调 URL 填 `http://localhost:5173/api/auth/callback/github`，并让 `BETTER_AUTH_URL` 匹配本地 origin。在对应环境填入 `GITHUB_CLIENT_ID` 和 `GITHUB_CLIENT_SECRET`。点击 GitHub 登录，授权后由 Better Auth 处理回调，经过 `/auth/callback` 确认会话并回到工作台。取消授权应回到落地页并显示错误。
+
+## 支付宝 Vibe Pay 网页收款
+
+### 本地沙箱
+
+1. 使用官方 `npx -y @alipay/alipay-aipay@latest install` 安装并加载 Skill，按其网页收款流程创建或复核仓库根目录的 `.alipay-sandbox.json`。这是仅本机使用的敏感文件，已经加入 Git 忽略。
+2. 在 `.env` 配置一种实际可用的 Better Auth 登录方式。邮箱用 Resend，GitHub 用本地 OAuth App。运行 `npm run dev:alipay`，打开 `http://localhost:5173`。脚本使用 Skill 生成的沙箱应用，自动应用本地迁移并运行构建后的 Worker。沙箱订单与普通开发 D1 数据分别保存。
+3. 登录 → 账户 → 套餐与用量 → 选择支付宝额度包 → 通过支付宝沙箱买家完成付款。回跳页用原购买账户向服务端发起签名查单，也可回到套餐面板点击“查询支付宝订单”。确认套餐、30 天周期和余额已变化，再查询一次核对周期与余额没有重复增加。
+4. 异步通知需要支付宝可访问的部署地址。要单独验收异步通知，在测试 Worker 使用同一沙箱应用和测试 D1，设置 HTTPS 的 `ALIPAY_NOTIFY_URL` 指向 `/api/billing/alipay/notify`。支付后先检查 webhook 返回纯文本 `success` 和订单进入 `paid`，再打开回跳页确认相同权益。通知重试应仍为同一笔订单，改动金额或签名的通知应被拒绝。
+
+### 开发者手动完成
+
+- 在支付宝商家平台完成主体实名和 AI 网页应用收款签约，开通对应 Web 应用。以支付宝平台给出的资格、商户标识和生产应用状态为准。
+- 在目标环境的 `.env` 配置 `APP_MARKET=cn`、`ALIPAY_MODE=production`、`ALIPAY_APP_ID`、`ALIPAY_PRIVATE_KEY`（原始 PKCS#1）、`ALIPAY_PUBLIC_KEY` 和 `ALIPAY_SELLER_ID`。私钥通过本机密钥管理写入。启用异步通知时配置已部署的 HTTPS `ALIPAY_NOTIFY_URL`。未配置通知时，由 Worker 的定时查单和用户主动查询完成确认。
+- 在确认目标 D1 和 Worker 环境后，应用 `0004_alipay.sql`，再部署。核对通知验签、定时任务、后台重试及交易查询。切换生产应用前先清理旧应用的待支付订单。
+- 可选退款操作员。在 `.env` 设置 `ALIPAY_OPERATOR_USER_ID` 为授权人员的 Better Auth user ID。该账户可在同源会话中向 `POST /api/billing/alipay/refund?order=<商户订单号>` 发起全额退款。查单确认退款后回收剩余套餐权益；相同订单安全重试，不会发起第二笔退款。已消耗的 AI 用量仍保留在账本。

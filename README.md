@@ -79,3 +79,7 @@ prototype/                  原型操作手册、页面验收与界面截图
 Agent 模型访问基于 `@earendil-works/pi-ai@1.5.2`。`.env` 的 `AGENT_RUNTIME` 可选 `pi-ai` / `pi-durable`；当前生产配置使用后者，在 SQLite Durable Object 中保存每轮原生 Harness 任务与工具结果，刷新复用原请求。`AI_API` 选择 pi 的 Responses 或 Chat Completions adapter，当前模型需要 Responses + `AI_REASONING_EFFORT=low` 才能调用函数工具。章节移动、内容更新和只读回答共享受校验的工具，章节顺序由所有简历渲染入口读取。
 
 计费首版提供 Free $0、Plus $10、Pro $50 / 月，以及服务端实际 Token 记账和额度控制。参见 [套餐规则](docs/product/billing.md)、[计费架构](docs/architecture/billing.md) 与 [支付开通](docs/harness/operations.md#stripe-支付开通)。未配置 Stripe 时仅 Free 可用，不能实际购买。
+
+已配置 GitHub OAuth 或 Resend 发信时，落地页还提供 GitHub 和邮箱验证码登录。配置与验证见 [邮箱验证码和 GitHub 登录](docs/harness/operations.md#邮箱验证码和-github-登录)。
+
+国内版可选用支付宝 Vibe Pay 网页收款销售 30 天 AI 额度包。运行 `npm run dev:alipay` 使用官方 Skill 准备的本地沙箱，详见 [支付宝开通与验证](docs/harness/operations.md#支付宝-vibe-pay-网页收款)。

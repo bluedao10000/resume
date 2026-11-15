@@ -1,3 +1,4 @@
+import { alipayConfigured } from './alipay-config'
 import {
   creditUnits,
   usageCharge,
@@ -82,15 +83,35 @@ export async function billingPeriod(
   userId: string,
   now = Date.now(),
 ) {
+  const china = env.APP_MARKET === 'cn'
+  const sandbox = env.ALIPAY_MODE === 'sandbox'
   const sub = await env.DB.prepare(
-    env.APP_MARKET === 'cn'
+    china
       ? `SELECT plan, 'active' AS status, period_start, period_end, 0 AS cancel_at_period_end
-         FROM billing_wechat_orders WHERE user_id=? AND status='paid'
-         AND period_end>? AND period_start<=?
+         FROM (
+           SELECT plan, period_start, period_end FROM billing_wechat_orders
+           WHERE user_id=? AND status='paid'
+           UNION ALL
+           SELECT plan, period_start, period_end FROM billing_alipay_orders
+           WHERE user_id=? AND status IN ('paid','refund_pending') AND mode=?
+           AND (? = 'production' OR app_id=?)
+         ) WHERE period_end>? AND period_start<=?
          ORDER BY period_end DESC LIMIT 1`
       : 'SELECT * FROM billing_subscriptions WHERE user_id=?',
   )
-    .bind(userId, ...(env.APP_MARKET === 'cn' ? [now, now] : []))
+    .bind(
+      userId,
+      ...(china
+        ? [
+            userId,
+            sandbox ? 'sandbox' : 'production',
+            sandbox ? 'sandbox' : 'production',
+            env.ALIPAY_APP_ID ?? '',
+            now,
+            now,
+          ]
+        : []),
+    )
     .first<Subscription>()
   const active =
     sub &&
@@ -153,6 +174,7 @@ export async function billingSummary(env: BillingEnv, userId: string) {
     plans: plans(env),
     tariff: tariff(env),
     paymentConfigured: paymentsConfigured(env),
+    alipayConfigured: alipayConfigured(env),
     canManage: !!customer && paymentsConfigured(env),
     cancelAtPeriodEnd: !!period.sub?.cancel_at_period_end,
   }

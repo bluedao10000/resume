@@ -52,6 +52,7 @@ export const BillingSummarySchema = z.object({
   remaining: z.number(),
   tokens: UsageSchema,
   paymentConfigured: z.boolean(),
+  alipayConfigured: z.boolean().default(false),
   canManage: z.boolean(),
   cancelAtPeriodEnd: z.boolean(),
   plans: z.array(

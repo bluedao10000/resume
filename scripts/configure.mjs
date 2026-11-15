@@ -8,6 +8,9 @@ export const secretKeys = [
   'BETTER_AUTH_SECRET',
   'GOOGLE_CLIENT_ID',
   'GOOGLE_CLIENT_SECRET',
+  'GITHUB_CLIENT_SECRET',
+  'AUTH_RESEND_API_KEY',
+  'ALIPAY_PRIVATE_KEY',
   'WECHAT_APP_SECRET',
   'WECHAT_PAY_PRIVATE_KEY',
   'WECHAT_PAY_API_V3_KEY',
@@ -102,6 +105,17 @@ const schema = z.object({
   BETTER_AUTH_SECRET: z.string().min(32),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  AUTH_RESEND_API_KEY: z.string().optional(),
+  AUTH_EMAIL_FROM: z.string().optional(),
+  ALIPAY_MODE: z.enum(['off', 'sandbox', 'production']).default('off'),
+  ALIPAY_APP_ID: z.string().optional(),
+  ALIPAY_PRIVATE_KEY: z.string().optional(),
+  ALIPAY_PUBLIC_KEY: z.string().optional(),
+  ALIPAY_SELLER_ID: z.string().optional(),
+  ALIPAY_NOTIFY_URL: z.url().or(z.literal('')).optional(),
+  ALIPAY_OPERATOR_USER_ID: z.string().optional(),
   AI_BASE_URL: z.url(),
   AI_API_KEY: z.string().optional(),
   AI_MODEL: z.string(),
@@ -153,6 +167,26 @@ export function parseConfiguration(values) {
       `Invalid .env fields: ${[...new Set(parsed.error.issues.map((issue) => issue.path.join('.')))].join(', ')}`,
     )
   const config = parsed.data
+  if (
+    config.ALIPAY_MODE !== 'off' &&
+    (config.APP_MARKET !== 'cn' ||
+      !config.ALIPAY_APP_ID ||
+      !config.ALIPAY_PRIVATE_KEY ||
+      !config.ALIPAY_PUBLIC_KEY ||
+      !config.ALIPAY_SELLER_ID)
+  )
+    throw new Error(
+      'Alipay requires CN mode and a complete application configuration.',
+    )
+  if (
+    config.ALIPAY_MODE === 'production' &&
+    (new URL(config.BETTER_AUTH_URL).protocol !== 'https:' ||
+      (config.ALIPAY_NOTIFY_URL &&
+        new URL(config.ALIPAY_NOTIFY_URL).protocol !== 'https:'))
+  )
+    throw new Error(
+      'Production Alipay requires an HTTPS return address and HTTPS if notifications are configured.',
+    )
   if (config.APP_MARKET === 'cn') {
     const paymentKeys = Object.keys(wechatSchema).filter(
       (key) => key.startsWith('WECHAT_PAY_') && !key.endsWith('_FEN'),
@@ -175,17 +209,38 @@ export function parseConfiguration(values) {
     Number(config.AI_MAX_OUTPUT_TOKENS)
   )
     throw new Error('Billing minimum output must fit the model output limit.')
+  if (!!config.GITHUB_CLIENT_ID !== !!config.GITHUB_CLIENT_SECRET)
+    throw new Error('GitHub login requires both OAuth credentials.')
+  if (!!config.AUTH_EMAIL_FROM !== !!config.AUTH_RESEND_API_KEY)
+    throw new Error('Email login requires a sender and a Resend API key.')
+  const wechatLogin =
+    config.APP_MARKET === 'cn' &&
+    config.WECHAT_APP_ID &&
+    config.WECHAT_APP_SECRET
+  const googleLogin =
+    config.APP_MARKET === 'global' &&
+    config.GOOGLE_CLIENT_ID &&
+    config.GOOGLE_CLIENT_SECRET
+  if (
+    wechatLogin &&
+    config.APP_MODE === 'live' &&
+    new URL(config.BETTER_AUTH_URL).protocol !== 'https:'
+  )
+    throw new Error('Live WeChat login requires an HTTPS origin.')
   if (
     config.APP_MODE === 'live' &&
     (!config.AI_API_KEY ||
       !config.AI_MODEL ||
-      (config.APP_MARKET === 'cn'
-        ? !config.WECHAT_APP_ID ||
-          !config.WECHAT_APP_SECRET ||
-          new URL(config.BETTER_AUTH_URL).protocol !== 'https:'
-        : !config.GOOGLE_CLIENT_ID || !config.GOOGLE_CLIENT_SECRET))
+      !(
+        wechatLogin ||
+        googleLogin ||
+        config.GITHUB_CLIENT_ID ||
+        config.AUTH_EMAIL_FROM
+      ))
   )
-    throw new Error('Live mode requires model and market OAuth configuration.')
+    throw new Error(
+      'Live mode requires model configuration and a login method.',
+    )
   if (config.APP_MODE === 'live' && config.BILLING_MODEL !== config.AI_MODEL)
     throw new Error(
       'BILLING_MODEL must match AI_MODEL; verify the tariff before changing models.',
@@ -267,6 +322,9 @@ export function workerConfiguration(config) {
           : []),
       ],
     }),
+    ...(config.ALIPAY_MODE !== 'off' && {
+      triggers: { crons: ['* * * * *'] },
+    }),
     keep_vars: false,
     vars: Object.fromEntries(
       Object.entries(config).filter(
@@ -289,8 +347,10 @@ export function workerConfiguration(config) {
   }
 }
 
-export function configure() {
-  const config = loadConfiguration()
+export function configure(
+  config = loadConfiguration(),
+  output = 'wrangler.jsonc',
+) {
   for (const folder of ['cmaps', 'standard_fonts', 'wasm']) {
     fs.cpSync(`node_modules/pdfjs-dist/${folder}`, `public/pdfjs/${folder}`, {
       recursive: true,
@@ -298,7 +358,7 @@ export function configure() {
   }
   fs.copyFileSync('node_modules/pdfjs-dist/LICENSE', 'public/pdfjs/LICENSE')
   fs.writeFileSync(
-    'wrangler.jsonc',
+    output,
     '// Generated from .env by scripts/configure.mjs. Do not edit.\n' +
       JSON.stringify(workerConfiguration(config), null, 2) +
       '\n',

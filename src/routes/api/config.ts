@@ -1,7 +1,7 @@
 import { runtimeConfig } from '../../config/runtime-defaults.mjs'
 import { createFileRoute } from '@tanstack/react-router'
 import { env } from 'cloudflare:workers'
-import { authConfigured } from '../../server/auth'
+import { authConfigured, authMethods } from '../../server/auth'
 import { plans } from '../../server/billing'
 export const Route = createFileRoute('/api/config')({
   server: {
@@ -21,6 +21,7 @@ export const Route = createFileRoute('/api/config')({
           runtime:
             config.AGENT_RUNTIME === 'pi-durable' ? 'pi-durable' : 'pi-ai',
           market: config.APP_MARKET === 'cn' ? 'cn' : 'global',
+          authMethods: authMethods(config),
           authConfigured: authConfigured(config),
         })
       },

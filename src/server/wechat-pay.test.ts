@@ -126,7 +126,7 @@ test('reuses an uncertain checkout, isolates orders and grants a single paid per
     const { order } = await wechatCheckout(env, 'user-a', 'pro')
     expect(order).toMatchObject({
       plan: 'plus',
-      totalFen: 6800,
+      totalFen: 2000,
       qr: expect.stringMatching(/^data:image\/png;base64,/),
     })
     expect(requests[0]).toEqual(requests[1])
@@ -141,7 +141,7 @@ test('reuses an uncertain checkout, isolates orders and grants a single paid per
       trade_type: 'NATIVE',
       trade_state: 'SUCCESS',
       success_time: new Date(start).toISOString(),
-      amount: { total: 6800, currency: 'CNY' },
+      amount: { total: 2000, currency: 'CNY' },
     }
     await expect(
       settleWechatOrder(env, {

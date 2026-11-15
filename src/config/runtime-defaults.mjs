@@ -33,8 +33,8 @@ const common = {
   IMPORT_MAX_TEXT_CHARACTERS: '20000',
   IMPORT_TIMEOUT_MS: '20000',
   IMPORT_MAX_EXPANDED_BYTES: '52428800',
-  WECHAT_PAY_PLUS_FEN: '6800',
-  WECHAT_PAY_PRO_FEN: '32800',
+  WECHAT_PAY_PLUS_FEN: '2000',
+  WECHAT_PAY_PRO_FEN: '9900',
 }
 
 // Folio's existing conversion is 25 credits per USD. Use the published

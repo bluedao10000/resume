@@ -39,6 +39,7 @@ import {
 import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
+import { EmailOtpLogin } from '../components/EmailOtpLogin'
 import { LandingPage, landingFaq } from '../components/LandingPage'
 import { BillingPanel } from '../components/BillingPanel'
 import {
@@ -154,6 +155,13 @@ const RichTextEditor = lazy(() =>
 const ConfigSchema = z.object({
   mode: z.enum(['demo', 'live']),
   runtime: z.enum(['pi-ai', 'pi-durable']).default('pi-ai'),
+  authMethods: z
+    .object({
+      market: z.boolean(),
+      github: z.boolean(),
+      email: z.boolean(),
+    })
+    .optional(),
   authConfigured: z.boolean(),
   market: z.enum(['cn', 'global']).default('global'),
   importLimits: ImportLimitsSchema.optional(),
@@ -174,7 +182,7 @@ function Entry() {
   const [loginError, setLoginError] = useState('')
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('loginFailed'))
-      setLoginError('微信登录未完成，请重试。')
+      setLoginError('登录未完成，请重试。')
     const controller = new AbortController()
     fetch('/api/config', { signal: controller.signal })
       .then((response) => {
@@ -192,14 +200,14 @@ function Entry() {
     }
     return () => controller.abort()
   }, [])
-  async function login() {
+  async function login(provider: 'wechat' | 'google' | 'github') {
     setLoginBusy(true)
     setLoginError('')
     try {
       const response = await authClient.signIn.social({
-        provider: config?.market === 'cn' ? 'wechat' : 'google',
-        ...(config?.market === 'cn' && { errorCallbackURL: '/?loginFailed=1' }),
-        callbackURL: '/',
+        provider,
+        ...(provider !== 'google' && { errorCallbackURL: '/?loginFailed=1' }),
+        callbackURL: provider === 'github' ? '/auth/callback' : '/',
       })
       if (response.error)
         setLoginError(response.error.message ?? '登录失败，请重试。')
@@ -247,18 +255,23 @@ function Entry() {
         canLogin={false}
         isLoading={loginBusy}
         error={loginError}
-        onLogin={login}
+        onLogin={() => void login('google')}
       />
     )
+  const marketProvider = config.market === 'cn' ? 'wechat' : 'google'
   if (!session && !(config.mode === 'demo' && demoOpen))
     return (
       <LandingPage
         ready
         loginProvider={config.market === 'cn' ? '微信' : 'Google'}
-        canLogin={config.authConfigured}
+        canLogin={config.authMethods?.market ?? config.authConfigured}
+        onGithub={
+          config.authMethods?.github ? () => void login('github') : undefined
+        }
+        emailLogin={config.authMethods?.email}
         isLoading={loginBusy}
         error={loginError}
-        onLogin={() => void login()}
+        onLogin={() => void login(marketProvider)}
         onDemo={
           config.mode === 'demo'
             ? () => {
@@ -297,7 +310,7 @@ function Workspace({
 }: {
   session: Session | null
   config: Config
-  onLogin: () => Promise<void>
+  onLogin: (provider: 'wechat' | 'google' | 'github') => Promise<void>
   onSignOut: () => Promise<void>
   loginBusy: boolean
   loginError: string
@@ -1340,25 +1353,32 @@ function Workspace({
               }}
             />
           ) : (
-            <Button
-              label={
-                config.authConfigured
-                  ? config.market === 'cn'
-                    ? '使用微信继续'
-                    : '使用 Google 继续'
-                  : '登录尚未配置'
-              }
-              width="100%"
-              variant="primary"
-              isDisabled={!config.authConfigured}
-              isLoading={loginBusy}
-              onClick={() => void onLogin()}
-              icon={
-                config.market === 'global' ? (
-                  <span className="google-icon">G</span>
-                ) : undefined
-              }
-            />
+            <>
+              {(config.authMethods?.market ?? config.authConfigured) && (
+                <Button
+                  label={
+                    config.market === 'cn' ? '使用微信继续' : '使用 Google 继续'
+                  }
+                  width="100%"
+                  variant="primary"
+                  isLoading={loginBusy}
+                  onClick={() =>
+                    void onLogin(config.market === 'cn' ? 'wechat' : 'google')
+                  }
+                />
+              )}
+              {config.authMethods?.github && (
+                <button
+                  className="outline-button"
+                  disabled={loginBusy}
+                  onClick={() => void onLogin('github')}
+                >
+                  使用 GitHub 登录
+                </button>
+              )}
+              {config.authMethods?.email && <EmailOtpLogin />}
+              {!config.authConfigured && <p>登录尚未配置</p>}
+            </>
           )}
           {loginError ? <p role="alert">{loginError}</p> : null}
         </Modal>
