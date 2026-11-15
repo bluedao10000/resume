@@ -98,7 +98,7 @@ export const Route = createFileRoute('/api/agent')({
                 { error: '会话或请求标识无效，请刷新后重试。' },
                 { status: 400 },
               )
-            return durableStub(session.user.id, identity.data).fetch(
+            return await durableStub(session.user.id, identity.data).fetch(
               new Request('https://resume-agent.internal/', {
                 method: 'POST',
                 headers: {
@@ -154,9 +154,11 @@ export const Route = createFileRoute('/api/agent')({
             code:
               error instanceof AgentError
                 ? error.code
-                : timeout
-                  ? 'MODEL_TIMEOUT'
-                  : 'AGENT_FAILURE',
+                : error instanceof BillingError
+                  ? `BILLING_${error.status}`
+                  : timeout
+                    ? 'MODEL_TIMEOUT'
+                    : 'AGENT_FAILURE',
             ...(error instanceof AgentError && {
               providerStatus: error.providerStatus,
             }),

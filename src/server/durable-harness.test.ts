@@ -11,7 +11,11 @@ import {
   resumeTurnSnapshot,
   resumeTurnUsage,
 } from './durable-harness'
-import { testModelConfig, toolResponse } from './pi-test-fixtures'
+import {
+  responsesToolResponse,
+  testModelConfig,
+  toolResponse,
+} from './pi-test-fixtures'
 const input = AgentRequestSchema.parse({
   intent: 'polish',
   text: '把专业技能移动到工作经历上方',
@@ -20,6 +24,40 @@ const input = AgentRequestSchema.parse({
   requestId: 'request-fixture',
 })
 describe('pi-durable SQLite 恢复', () => {
+  it('国内 DO 从精简绑定补全默认模型配置并完成工具调用', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'folio-pi-cn-defaults-'))
+    const transport = vi.fn<typeof fetch>().mockImplementation(async () =>
+      responsesToolResponse('resume_reorder_sections', {
+        section: 'skills',
+        relativeTo: 'experience',
+        position: 'before',
+      }),
+    )
+    try {
+      const harness = await openResumeHarness(
+        await openNodeSqliteStorage(join(directory, 'session.db')),
+        { APP_MARKET: 'cn', AI_API_KEY: 'fixture-only' },
+        undefined,
+        transport,
+      )
+      try {
+        const turn = await submitResumeTurn(harness, input)
+        await turn.wait(context)
+        expect(await resumeTurnSnapshot(harness)).toMatchObject({
+          status: 'completed',
+        })
+        expect(transport).toHaveBeenCalledTimes(1)
+        expect(String(transport.mock.calls[0][0])).toBe(
+          'https://api.deepseek.com/responses',
+        )
+      } finally {
+        await harness.close(context)
+      }
+    } finally {
+      await rm(directory, { recursive: true, force: true })
+    }
+  })
+
   it('持久化运行时在实际供应商网络调用前执行预算检查', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'folio-pi-budget-'))
     const transport = vi.fn<typeof fetch>()

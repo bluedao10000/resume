@@ -201,6 +201,7 @@ npm run deploy
 - `/api/billing/` 返回本人套餐和 no-store 摘要；401 检查登录，503 检查模型费率匹配、迁移与配置。签名 webhook 失败返回 5xx，由 Stripe 重试，不能手工把浏览器 `billing=success` 当付款凭证。
 - 先查 Stripe authoritative subscription、invoice paid 状态、customer 与 `metadata.folio_user_id`、price、item 周期，再查 D1 `billing_subscriptions`。不认识的价格和多份有效订阅需要人工对账，不得简单赋予 Pro。
 - `billing_runs.status='reserved'` 占用余额与并发。DO 活动任务由 alarm / wake / GET 重试结算。异常旧预留先核对运行终态与 provider usage；轻量进程崩溃及 D1→DO 交接故障没有自动回收，不得仅因时间较久便释放仍活动的请求。
+- 国内 Agent 提示额度被占用时，先用参考编号核对 Worker 错误，再核对同账户活动预留数量与额度。若日志显示 DO 在初始化模型地址时失败，检查 Worker 与 DO 是否均已应用市场默认配置。更正初始化后，请继续逐笔核对旧预留的 provider 调用与账本终态。
 - 确认从未发送供应商请求、或终态且没有报告用量后，才可由运维对精确 user/run 以 `WHERE status='reserved'` 条件释放。已有有效 usage 时按该 run 的 `tariff_json` 结算；若超出预留，先查明协议与计价边界，不能以预估 Token 替代实际账单。当前没有后台对账按钮或自动退款流程。
 - Stripe 网络超时可能已经创建 Checkout，因此保留待完成锁到过期。没有 session ID 的不确定结账不能直接取消重开。完成的支付需等待 webhook，不能再买一份；同订阅回调锁冲突交给 Stripe 重试。
 - D1 新增计费与 pi-ai 最终结果缓存，其中可能含简历输出；完整简历库和 UI 历史仍是本机数据。DO 保留任务 transcript。清理本机站点不会清理这些服务端记录。账户删除和隐私导出尚待统一实现。

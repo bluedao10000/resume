@@ -1,3 +1,4 @@
+import { runtimeConfig } from '../config/runtime-defaults.mjs'
 import { BACKGROUND_CONTEXT } from '@earendil-works/chord/context'
 import { unsafe } from '@earendil-works/pi-schema'
 import {
@@ -36,11 +37,12 @@ export const TurnDoc = defineDoc({
 })
 export async function openResumeHarness(
   storage: Storage,
-  config: Record<string, string>,
+  bindings: Record<string, string>,
   onWake?: (wake: Wake) => void,
   fetchModel?: typeof fetch,
   preparePayload?: (payload: unknown) => Promise<unknown>,
 ) {
+  const config = runtimeConfig(bindings)
   const { models } = createResumeModels(config, fetchModel, preparePayload)
   const registry = createRegistry()
   const tools = resumeTools.map((tool) =>

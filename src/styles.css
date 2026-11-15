@@ -563,6 +563,7 @@ summary {
 .user-avatar {
   display: grid;
   place-items: center;
+  flex: none;
   width: 26px;
   height: 26px;
   background: #e7e7ec;
@@ -1510,11 +1511,16 @@ summary {
   padding: 9px 0;
 }
 .account-details dt {
+  flex: none;
   color: var(--muted);
 }
 .account-details dd {
   margin: 0;
   overflow-wrap: anywhere;
+}
+.account-billing-link {
+  display: block;
+  margin-bottom: 16px;
 }
 .export-options {
   display: flex;

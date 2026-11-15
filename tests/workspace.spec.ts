@@ -543,6 +543,84 @@ test('生产登录后直接进入工作台，退出回落地页并保留账户�
   ).toBeNull()
 })
 
+test('国内空昵称账户显示默认头像、账号与服务端额度，读取失败可重试', async ({
+  page,
+}) => {
+  const now = new Date().toISOString()
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      json: { mode: 'live', market: 'cn', authConfigured: true },
+    }),
+  )
+  await page.route('**/api/auth/get-session', (route) =>
+    route.fulfill({
+      json: {
+        session: {
+          id: 'account-session',
+          token: 'test-only',
+          userId: 'account-user',
+          expiresAt: '2099-01-01T00:00:00.000Z',
+          createdAt: now,
+          updatedAt: now,
+        },
+        user: {
+          id: 'account-user',
+          name: ' ',
+          email: 'fixture@wechat.placeholder.invalid',
+          emailVerified: false,
+          createdAt: now,
+          updatedAt: now,
+        },
+      },
+    }),
+  )
+  let loads = 0
+  await page.route('**/api/billing/', (route) => {
+    loads++
+    if (loads === 1) return route.fulfill({ status: 503 })
+    return route.fulfill({
+      json: {
+        plan: 'plus',
+        periodStart: 1,
+        periodEnd: 2,
+        allowance: 125000000,
+        used: 3000000,
+        reserved: 500000,
+        remaining: 121500000,
+        tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+        plans: [{ id: 'plus', name: 'Plus', monthlyCents: 2000, credits: 125 }],
+        tariff: {
+          version: 'v1',
+          model: 'test',
+          input: 1,
+          output: 1,
+          cacheRead: 0,
+          cacheWrite: 0,
+        },
+        paymentConfigured: false,
+        canManage: false,
+        cancelAtPeriodEnd: false,
+      },
+    })
+  })
+  await page.goto('/')
+  const account = page.getByRole('button', { name: '账户设置' })
+  await expect(account.locator('.user-avatar svg')).toBeVisible()
+  expect(loads).toBe(0)
+  await account.click()
+  const dialog = page.getByRole('dialog', { name: '账户' })
+  await expect(dialog.getByText('account-user', { exact: true })).toBeVisible()
+  await expect(
+    dialog.getByText('fixture@wechat.placeholder.invalid'),
+  ).toHaveCount(0)
+  await expect(dialog.getByRole('alert')).toContainText(
+    '暂时无法读取套餐与额度',
+  )
+  await dialog.getByRole('button', { name: '重试' }).click()
+  await expect(dialog.getByText('Plus', { exact: true })).toBeVisible()
+  await expect(dialog.getByText('121.5 / 125 credits')).toBeVisible()
+})
+
 test('配置请求失败显示重试，不隐式进入演示或改写简历', async ({ page }) => {
   await page.route('**/api/config', (route) =>
     route.fulfill({ status: 503, json: { error: 'unavailable' } }),

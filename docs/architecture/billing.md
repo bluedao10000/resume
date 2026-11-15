@@ -33,6 +33,8 @@ D1 迁移 `0002_billing.sql` 新增 customer、subscription、run、webhook rece
 
 预留按系统、工具、来源和历史的 UTF-8 bytes 估算安全上界，乘以配置的预留系数；若余额不足，降低输出上限，低于最小值则拒绝。真正发送前再次检查最终 payload bytes 的保守费用上界，覆盖普通输入/缓存费率中的最大值及输出上限，必要时在网络前拒绝。bytes 只用于准入，不作为实际用量收费。此保护基于当前文本及函数工具协议；增加多模态内容前必须重新设计预算。
 
+Durable Object 打开 Harness 前应用与 Worker 相同的市场默认配置。生成器会省略等于默认值的绑定，DO 解析模型地址、协议和预算前必须补全这些值。
+
 `pi-models.ts` 在官方 adapter 的 fetch 边界执行检查并写入 `max_output_tokens` / `max_completion_tokens`。不只依赖 durable hook 抛异常，因为 hook 的错误可能被 runtime 报告后继续。两种运行时均只有一轮生成、一个工具，关闭自动重试与 compaction。模型配置与费率模型不一致时关闭 live 调用，避免未知模型按旧价格收费。
 
 结算使用请求创建时的费率快照，`UPDATE … WHERE status='reserved'` 保证重复终态只结算一次。轻量运行在校验工具前捕获供应商 usage；durable 从持久化 assistant messages 合计。工具失败不抹掉已报告用量，reasoning 不额外累加。DO 在 wake、GET、alarm 和显式取消后检查终态，账本故障保留心跳重试；浏览器断开不等于取消。

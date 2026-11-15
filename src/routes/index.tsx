@@ -27,6 +27,7 @@ import {
   Search,
   Sparkles,
   Trash2,
+  UserRound,
   X,
 } from 'lucide-react'
 import { AgentChat, type Intent } from '../components/chat/AgentChat'
@@ -42,6 +43,7 @@ import { ConfirmDelete } from '../components/ConfirmDelete'
 import { EmailOtpLogin } from '../components/EmailOtpLogin'
 import { LandingPage, landingFaq } from '../components/LandingPage'
 import { BillingPanel } from '../components/BillingPanel'
+import { AccountDetails } from '../components/AccountDetails'
 import {
   emptyResume,
   isExampleResume,
@@ -355,6 +357,7 @@ function Workspace({
     after: Resume[]
     selectedBefore: string
   } | null>(null)
+  const accountName = session?.user.name.trim()
   const scope = session?.user.id ?? 'guest'
   const scopeRef = useRef<string | null>(null)
   const resume =
@@ -838,10 +841,14 @@ function Workspace({
             aria-label={session ? '账户设置' : '登录工作空间'}
             onClick={() => setModal('login')}
           >
-            <span className="user-avatar">
-              {session?.user.name?.slice(0, 1) ?? '访'}
+            <span className="user-avatar" aria-hidden="true">
+              {accountName ? (
+                Array.from(accountName)[0]
+              ) : (
+                <UserRound size={15} />
+              )}
             </span>
-            <span>{session?.user.name ?? '访客工作空间'}</span>
+            <span>{session ? accountName || '我的账户' : '访客工作空间'}</span>
             <MoreHorizontal size={18} />
           </button>
         </div>
@@ -1318,20 +1325,10 @@ function Workspace({
       {modal === 'login' ? (
         <Modal title={session ? '账户' : '登录'} onClose={() => setModal(null)}>
           {session ? (
-            <dl className="account-details">
-              <div>
-                <dt>{config.market === 'cn' ? '微信账户' : '邮箱'}</dt>
-                <dd>
-                  {config.market === 'cn'
-                    ? session.user.name
-                    : session.user.email}
-                </dd>
-              </div>
-              <div>
-                <dt>存储</dt>
-                <dd>当前浏览器</dd>
-              </div>
-            </dl>
+            <AccountDetails
+              user={session.user}
+              onBilling={() => setModal('billing')}
+            />
           ) : (
             <p className="login-description">
               演示简历仅保存在此浏览器，登录后使用独立空间。

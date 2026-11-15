@@ -39,7 +39,9 @@ export class ResumeAgentSession extends DurableObject {
         undefined,
         async (payload) => {
           const run = await ctx.storage.get<BillingRun>('billingRun')
-          return run ? prepareBilledPayload(payload, run, env.AI_API) : payload
+          return run
+            ? prepareBilledPayload(payload, run, this.ledger.AI_API)
+            : payload
         },
       )
       await this.arm({ ...this.harness.wake(), active: true })

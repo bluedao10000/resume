@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { z } from 'zod'
+import { formatCredits as credits } from '../lib/billing-format'
 import { AlipayPurchase } from './AlipayPurchase'
 import { BillingSummarySchema, type BillingSummary } from '../domain/billing'
 
@@ -21,10 +22,6 @@ const checkoutResult = z.object({
     })
     .nullable(),
 })
-const credits = (units: number) =>
-  new Intl.NumberFormat('en-US', { maximumFractionDigits: 3 }).format(
-    units / 1000000,
-  )
 const count = (value: number) => new Intl.NumberFormat('en-US').format(value)
 export function BillingPanel({
   signedIn,
