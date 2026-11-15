@@ -12,3 +12,7 @@ playwright-report/
 /public/pdfjs/
 /.alipay-sandbox.json
 /wrangler.alipay-sandbox.jsonc
+
+# Local UX simulation report and raw evidence
+/Folio_User_Experience_Simulation_Report.md
+/docs/research/folio-ux-simulation-evidence/
