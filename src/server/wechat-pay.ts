@@ -154,6 +154,8 @@ export async function wechatCheckout(
          SELECT 1 FROM billing_alipay_orders WHERE user_id=? AND mode=?
            AND (mode='production' OR app_id=?) AND (status='pending' OR
             (status IN ('paid','refund_pending') AND period_end>?))
+       ) AND NOT EXISTS (
+         SELECT 1 FROM billing_test_grants WHERE user_id=? AND period_start<=? AND period_end>?
        ) ON CONFLICT DO NOTHING`,
     )
       .bind(
@@ -170,6 +172,9 @@ export async function wechatCheckout(
         userId,
         env.ALIPAY_MODE === 'sandbox' ? 'sandbox' : 'production',
         env.ALIPAY_APP_ID ?? '',
+        now,
+        userId,
+        now,
         now,
       )
       .run()

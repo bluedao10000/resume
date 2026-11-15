@@ -95,6 +95,32 @@ test('三档价格、真实用量与禁用支付，支付回跳不能授予套�
     fullPage: true,
   })
 })
+test('本期暂无已结算用量，刷新后在展开的明细中显示真实 Token', async ({
+  page,
+}) => {
+  let settled = false
+  await page.route('**/api/billing/', (route) =>
+    route.fulfill({
+      json: settled
+        ? summary
+        : {
+            ...summary,
+            used: 0,
+            tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+          },
+    }),
+  )
+  await page.goto('/?billing=success')
+  const panel = page.getByRole('dialog', { name: '套餐与用量' })
+  await panel.getByText('Token 用量与计费规则', { exact: true }).click()
+  await expect(
+    panel.getByText('本期暂无已结算 Token', { exact: false }),
+  ).toBeVisible()
+  settled = true
+  await panel.getByRole('button', { name: '刷新用量' }).click()
+  await expect(panel.getByText('10,000 tokens', { exact: true })).toBeVisible()
+})
+
 test('结账失败保留 Free，额度不足保留简历', async ({ page }) => {
   await page.route('**/api/billing/', (route) =>
     route.fulfill({ json: { ...summary, paymentConfigured: true } }),

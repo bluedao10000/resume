@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { runtimeDefaults } from '../config/runtime-defaults.mjs'
 import { creditUnits, usageCharge } from '../domain/billing'
 import { AgentRequestSchema, sampleResume } from '../domain/resume'
 import {
@@ -135,6 +136,41 @@ describe('服务端计费与额度', () => {
       db.close()
     }
   })
+  it('国内测试 Pro 授权按账户和有效期生效，并使用同一份用量账本', async () => {
+    const db = testBillingDb()
+    try {
+      const env = {
+        ...db.env,
+        ...runtimeDefaults('cn'),
+        APP_MARKET: 'cn',
+      } as unknown as BillingEnv
+      const now = Date.now()
+      await env.DB.prepare(
+        "INSERT INTO billing_test_grants VALUES ('user-a','pro',?,?)",
+      )
+        .bind(now - 1000, now + 100000)
+        .run()
+      expect((await billingSummary(env, 'user-b')).plan).toBe('free')
+      const { run } = await reserveRun(env, 'user-a', input('cn-grant'))
+      expect(run.plan).toBe('pro')
+      expect((await billingSummary(env, 'user-a')).tokens.input).toBe(0)
+      const usage = { input: 1000, output: 100, cacheRead: 40, cacheWrite: 0 }
+      await settleRun(env, run.id, usage)
+      expect(await billingSummary(env, 'user-a')).toMatchObject({
+        plan: 'pro',
+        allowance: 625000000,
+        reserved: 0,
+        tokens: usage,
+      })
+      await env.DB.prepare('UPDATE billing_test_grants SET period_end=?')
+        .bind(now - 1)
+        .run()
+      expect((await billingSummary(env, 'user-a')).plan).toBe('free')
+    } finally {
+      db.close()
+    }
+  })
+
   it('订阅到期后回到 Free，取消续费在本期结束前仍保留权益', async () => {
     const db = testBillingDb()
     try {

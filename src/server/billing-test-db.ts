@@ -12,6 +12,7 @@ export function testBillingDb() {
   sqlite.exec(readFileSync('migrations/0002_billing.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0003_wechat_pay.sql', 'utf8'))
   sqlite.exec(readFileSync('migrations/0004_alipay.sql', 'utf8'))
+  sqlite.exec(readFileSync('migrations/0005_billing_test_grants.sql', 'utf8'))
   sqlite.exec(`INSERT INTO "user"(id,name,email,emailVerified,createdAt,updatedAt)
     VALUES ('user-a','Fixture A','a@example.invalid',1,0,0),('user-b','Fixture B','b@example.invalid',1,0,0)`)
   type Value = string | number | null | Uint8Array

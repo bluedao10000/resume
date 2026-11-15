@@ -11,8 +11,17 @@ import {
   openResumeHarness,
   submitResumeTurn,
   resumeTurnSnapshot,
+  resumeTurnUsage,
 } from './durable-harness'
 import { AgentRequestSchema, sampleResume } from '../domain/resume'
+import {
+  billingSummary,
+  prepareBilledPayload,
+  reserveRun,
+  settleRun,
+  type BillingEnv,
+} from './billing'
+import { testBillingDb } from './billing-test-db'
 it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
   'configured provider executes real pi-ai and native pi-durable tools',
   async () => {
@@ -93,6 +102,59 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
     expect(
       [imported.resume.summary, ...imported.resume.skills].join('\n'),
     ).toMatch(/\*\*(?:React|TypeScript)\*\*/)
+  },
+  120000,
+)
+
+it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
+  'configured durable provider reports usage that settles in the billing ledger',
+  async () => {
+    const bindings = parseEnv(await readFile('.env', 'utf8')) as Record<
+      string,
+      string
+    >
+    const db = testBillingDb()
+    const config = {
+      ...runtimeDefaults(bindings.APP_MARKET),
+      ...bindings,
+      DB: db.env.DB,
+    } as unknown as BillingEnv
+    const directory = await mkdtemp(join(tmpdir(), 'folio-live-usage-'))
+    try {
+      const input = AgentRequestSchema.parse({
+        intent: 'polish',
+        text: '把专业技能移到工作经历上方，只调整章节顺序。',
+        resume: sampleResume,
+        threadId: crypto.randomUUID(),
+        requestId: crypto.randomUUID(),
+      })
+      const { run } = await reserveRun(config, 'user-a', input)
+      const harness = await openResumeHarness(
+        await openNodeSqliteStorage(join(directory, 'turn.db')),
+        bindings,
+        undefined,
+        undefined,
+        async (payload) => prepareBilledPayload(payload, run, config.AI_API),
+      )
+      try {
+        const turn = await submitResumeTurn(harness, input)
+        await turn.wait(context)
+        expect((await resumeTurnSnapshot(harness)).status).toBe('completed')
+        const usage = await resumeTurnUsage(harness)
+        expect(usage.input + usage.cacheRead).toBeGreaterThan(0)
+        expect(usage.output).toBeGreaterThan(0)
+        await settleRun(config, run.id, usage)
+        const summary = await billingSummary(config, 'user-a')
+        expect(summary.tokens).toEqual(usage)
+        expect(summary.reserved).toBe(0)
+        expect(summary.used).toBeGreaterThan(0)
+      } finally {
+        await harness.close(context)
+      }
+    } finally {
+      db.close()
+      await rm(directory, { recursive: true, force: true })
+    }
   },
   120000,
 )

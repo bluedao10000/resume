@@ -152,7 +152,9 @@ export async function alipayCheckout(
      ) AND NOT EXISTS (
        SELECT 1 FROM billing_alipay_orders WHERE user_id=? AND mode=? AND (mode='production' OR app_id=?)
          AND (status='pending' OR (status IN ('paid','refund_pending') AND period_end>?))
-     ) ON CONFLICT DO NOTHING`,
+     ) AND NOT EXISTS (
+         SELECT 1 FROM billing_test_grants WHERE user_id=? AND period_start<=? AND period_end>?
+       ) ON CONFLICT DO NOTHING`,
   )
     .bind(
       crypto.randomUUID().replaceAll('-', ''),
@@ -165,6 +167,9 @@ export async function alipayCheckout(
       now,
       userId,
       ...scope(env),
+      now,
+      userId,
+      now,
       now,
     )
     .run()

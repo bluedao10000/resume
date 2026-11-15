@@ -25,6 +25,8 @@
 
 请求前预留额度，结束后释放未使用部分。预留不是实际 Token，也不是扣费结果。若余额不足以覆盖最小输出预算，Agent 返回额度不足并保留当前简历。停止或失败时，已由模型报告的有效用量仍会结算；没有报告的用量不推算收费。刷新或重发同一请求标识不重复扣减，另发一条消息属于新请求。
 
+用量明细显示当前周期已经结算的 Token。尚无结算用量时显示空状态；刷新用量保留已展开的明细。
+
 参考规则检索于 **2026-11-14**：
 
 - OpenAI Codex 官方 Standard `GPT-6.1 Sol` 的输入 / 缓存输入 / 输出 credits 为每百万 50 / 2.5 / 250。Codex credits 没有独立缓存写入收费项。来源：<https://developers.openai.com/codex/pricing>（当前重定向至 <https://learn.chatgpt.com/docs/pricing>）。

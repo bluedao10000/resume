@@ -89,14 +89,17 @@ export async function billingPeriod(
     china
       ? `SELECT plan, 'active' AS status, period_start, period_end, 0 AS cancel_at_period_end
          FROM (
-           SELECT plan, period_start, period_end FROM billing_wechat_orders
+           SELECT plan, period_start, period_end, 1 AS paid FROM billing_wechat_orders
            WHERE user_id=? AND status='paid'
            UNION ALL
-           SELECT plan, period_start, period_end FROM billing_alipay_orders
+           SELECT plan, period_start, period_end, 1 AS paid FROM billing_alipay_orders
            WHERE user_id=? AND status IN ('paid','refund_pending') AND mode=?
            AND (? = 'production' OR app_id=?)
+           UNION ALL
+           SELECT plan, period_start, period_end, 0 AS paid FROM billing_test_grants
+           WHERE user_id=?
          ) WHERE period_end>? AND period_start<=?
-         ORDER BY period_end DESC LIMIT 1`
+         ORDER BY paid DESC, period_end DESC LIMIT 1`
       : 'SELECT * FROM billing_subscriptions WHERE user_id=?',
   )
     .bind(
@@ -107,6 +110,7 @@ export async function billingPeriod(
             sandbox ? 'sandbox' : 'production',
             sandbox ? 'sandbox' : 'production',
             env.ALIPAY_APP_ID ?? '',
+            userId,
             now,
             now,
           ]
