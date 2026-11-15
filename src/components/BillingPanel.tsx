@@ -97,7 +97,8 @@ export function BillingPanel({
       setPending('')
     }
   }
-  if (loading) return <p role="status">正在读取套餐…</p>
+  if (loading && !summary && !catalog.length)
+    return <p role="status">正在读取套餐…</p>
   if (signedIn && !summary)
     return (
       <div role="alert" className="billing-error">
@@ -107,6 +108,8 @@ export function BillingPanel({
         </button>
       </div>
     )
+  const hasTokenUsage =
+    summary && Object.values(summary.tokens).some((value) => value > 0)
   return (
     <div className="billing-panel">
       {summary ? (
@@ -211,24 +214,28 @@ export function BillingPanel({
       {summary ? (
         <details className="billing-details">
           <summary>Token 用量与计费规则</summary>
-          <dl>
-            <div>
-              <dt>输入</dt>
-              <dd>{count(summary.tokens.input)} tokens</dd>
-            </div>
-            <div>
-              <dt>缓存读取</dt>
-              <dd>{count(summary.tokens.cacheRead)} tokens</dd>
-            </div>
-            <div>
-              <dt>缓存写入</dt>
-              <dd>{count(summary.tokens.cacheWrite)} tokens</dd>
-            </div>
-            <div>
-              <dt>输出（含推理）</dt>
-              <dd>{count(summary.tokens.output)} tokens</dd>
-            </div>
-          </dl>
+          {hasTokenUsage ? (
+            <dl>
+              <div>
+                <dt>输入</dt>
+                <dd>{count(summary.tokens.input)} tokens</dd>
+              </div>
+              <div>
+                <dt>缓存读取</dt>
+                <dd>{count(summary.tokens.cacheRead)} tokens</dd>
+              </div>
+              <div>
+                <dt>缓存写入</dt>
+                <dd>{count(summary.tokens.cacheWrite)} tokens</dd>
+              </div>
+              <div>
+                <dt>输出（含推理）</dt>
+                <dd>{count(summary.tokens.output)} tokens</dd>
+              </div>
+            </dl>
+          ) : (
+            <p>本期暂无已结算 Token。模型报告的用量在请求结算后显示。</p>
+          )}
           <p>
             每百万 Token：输入 {credits(summary.tariff.input)}、缓存读取{' '}
             {credits(summary.tariff.cacheRead)}、缓存写入{' '}
@@ -264,10 +271,10 @@ export function BillingPanel({
         <button
           type="button"
           className="billing-link"
-          disabled={!!pending}
+          disabled={loading || !!pending}
           onClick={() => void load()}
         >
-          刷新用量
+          {loading ? '正在刷新用量…' : '刷新用量'}
         </button>
       ) : null}
     </div>
