@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { miniDocumentResponse, miniImportLimits } from './mini-document'
 import { runtimeConfig } from '../config/runtime-defaults.mjs'
 import { agentPost, durableStatus } from './agent-handler'
 
@@ -50,6 +51,9 @@ export async function miniApi(
       return json({ error: '小程序服务未开启。' }, 404)
     if (path === 'config' && request.method === 'GET')
       return json({
+        importLimits: miniImportLimits(
+          env as unknown as Record<string, unknown>,
+        ),
         mode: env.APP_MODE,
         runtime: env.AGENT_RUNTIME,
         loginEnabled:
@@ -108,6 +112,11 @@ export async function miniApi(
     }
     const session = await miniSession(request, env)
     if (!session) return json({ error: '请先登录。' }, 401)
+    if (path === 'document' && request.method === 'POST')
+      return miniDocumentResponse(
+        request,
+        env as unknown as Record<string, unknown>,
+      )
     if (path === 'session' && request.method === 'GET') return json(session)
     if (path === 'session' && request.method === 'DELETE') {
       await env.DB.prepare(

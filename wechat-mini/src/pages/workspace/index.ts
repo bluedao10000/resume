@@ -1,5 +1,7 @@
 import '../../runtime'
 import { z } from 'zod'
+import { ImportLimitsSchema } from '../../../../src/domain/document-import'
+import { extractMiniFile } from '../../document-import'
 import { request } from '../../api'
 import {
   demoAgent,
@@ -31,6 +33,7 @@ const configSchema = z.object({
   mode: z.enum(['demo', 'live']),
   runtime: z.enum(['pi-ai', 'pi-durable']),
   loginEnabled: z.boolean(),
+  importLimits: ImportLimitsSchema.optional(),
 })
 type Auth = z.infer<typeof authSchema>
 const id = () =>
@@ -45,6 +48,8 @@ let epoch = 0
 let timer: ReturnType<typeof setTimeout> | undefined
 let undo: MiniWorkspace | null = null
 let hidden = false
+let importSequence = 0
+let importTask: WechatMiniprogram.RequestTask | undefined
 const key = () => 'folio:mini:v1:' + scope
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : '操作失败，请重试。'
@@ -52,6 +57,11 @@ type InputEvent = WechatMiniprogram.CustomEvent<{ value: string }>
 
 Page({
   data: {
+    importOpen: false,
+    importText: '',
+    importBusy: false,
+    importFileName: '',
+    backupOpen: false,
     entered: false,
     demo: false,
     busy: false,
@@ -150,6 +160,8 @@ Page({
       void this.resume()
   },
   onUnload() {
+    importSequence++
+    importTask?.abort()
     hidden = true
     epoch++
     clearTimeout(timer)
@@ -207,6 +219,8 @@ Page({
   },
   enter(nextScope: string, demo: boolean) {
     epoch++
+    importSequence++
+    importTask?.abort()
     clearTimeout(timer)
     scope = nextScope
     undo = null
@@ -216,6 +230,11 @@ Page({
         ? initialMiniWorkspace(id(), demo)
         : MiniWorkspaceSchema.parse(saved)
     this.setData({
+      importOpen: false,
+      importText: '',
+      importFileName: '',
+      importBusy: false,
+      backupOpen: false,
       entered: true,
       demo,
       tab: 'chat',
@@ -262,6 +281,7 @@ Page({
     await this.onLoad()
   },
   async logout() {
+    this.closeImport()
     if (this.data.busy) return
     try {
       if (!this.data.demo && auth)
@@ -310,6 +330,10 @@ Page({
   chooseIntent(event: WechatMiniprogram.BaseEvent) {
     const intent = event.currentTarget.dataset.intent as
       'import' | 'polish' | 'tailor'
+    if (intent === 'import') {
+      this.openImport()
+      return
+    }
     this.setData({
       intent,
       toolsOpen: false,
@@ -318,13 +342,115 @@ Page({
         intent === 'polish' && !this.data.input
           ? '帮我精简个人简介，保留真实经历。'
           : this.data.input,
-      intentName:
-        intent === 'import'
-          ? '导入简历'
-          : intent === 'tailor'
-            ? '按 JD 定制'
-            : '对话修改',
+      intentName: intent === 'tailor' ? '按 JD 定制' : '对话修改',
     })
+  },
+  openImport() {
+    if (workspace?.pending) return
+    this.setData({
+      tab: 'chat',
+      drawer: false,
+      toolsOpen: false,
+      importOpen: true,
+      error: '',
+    })
+  },
+  closeImport() {
+    importSequence++
+    importTask?.abort()
+    importTask = undefined
+    this.setData({ importOpen: false, importBusy: false })
+  },
+  inputImport(event: InputEvent) {
+    this.setData({ importText: event.detail.value })
+  },
+  toggleBackup() {
+    this.setData({ backupOpen: !this.data.backupOpen })
+  },
+  chooseDocument() {
+    if (this.data.importBusy || workspace?.pending) return
+    if (!auth || this.data.demo) {
+      this.setData({ error: '文件导入需要微信登录；演示模式可粘贴文字试用。' })
+      return
+    }
+    const limits = this.data.config?.importLimits
+    if (!limits) {
+      this.setData({ error: '文档导入配置尚未加载，请重新进入小程序。' })
+      return
+    }
+    const generation = epoch,
+      sequence = ++importSequence,
+      token = auth.token
+    const isCurrent = () =>
+      generation === epoch &&
+      sequence === importSequence &&
+      this.data.importOpen
+    wx.chooseMessageFile({
+      count: 1,
+      type: 'file',
+      extension: ['pdf', 'docx', 'doc'],
+      success: async (result) => {
+        if (!isCurrent()) return
+        const file = result.tempFiles[0]
+        if (!file) return
+        const type = file.name.split('.').pop()?.toLowerCase() || ''
+        if (!['pdf', 'docx'].includes(type)) {
+          this.setData({
+            error: '请选择 PDF 或 Word（DOCX）；旧版 DOC 请先另存为 DOCX。',
+          })
+          return
+        }
+        if (file.size > limits.maxFileBytes) {
+          this.setData({
+            error: `文件超过 ${Math.round(limits.maxFileBytes / 1048576)}MB，请压缩或拆分后重试。`,
+          })
+          return
+        }
+        this.setData({ importBusy: true, error: '' })
+        try {
+          const text = await extractMiniFile(
+            file.path,
+            type,
+            token,
+            limits.timeoutMs,
+            (task) => {
+              importTask = task
+            },
+            isCurrent,
+          )
+          if (isCurrent())
+            this.setData({ importText: text, importFileName: file.name })
+        } catch (error) {
+          if (isCurrent()) this.setData({ error: errorMessage(error) })
+        } finally {
+          if (isCurrent()) {
+            importTask = undefined
+            this.setData({ importBusy: false })
+          }
+        }
+      },
+      fail: (error) => {
+        if (isCurrent() && !/cancel/i.test(error.errMsg))
+          this.setData({ error: '无法选择文件，请重试。' })
+      },
+    })
+  },
+  async confirmImport() {
+    if (
+      this.data.importBusy ||
+      !this.data.importText.trim() ||
+      workspace?.pending
+    )
+      return
+    this.setData({
+      intent: 'import',
+      intentName: '导入简历',
+      input: this.data.importText,
+      tab: 'chat',
+    })
+    this.closeImport()
+    await this.send()
+    if (!this.data.error) this.setData({ importText: '', importFileName: '' })
   },
   async send() {
     if (

@@ -14,9 +14,9 @@
 
 ## 平台边界
 
-Astryx、assistant-ui 和 React ResumeDocument 是 DOM 组件，无法在原生小程序使用。网页保持原有组件；小程序只有一份 canonical workspace/message 状态，使用同一 ResumeSchema / sectionOrder / template 注册表与原生 document 模板。Markdown 在小程序中投影为安全纯文本，不解释 HTML。原生模板不是网页 A4 打印的像素级复刻。
+Astryx、assistant-ui 和 React ResumeDocument 是 DOM 组件，无法在原生小程序使用。网页保持原有组件；小程序只有一份 canonical workspace/message 状态，使用同一 ResumeSchema / sectionOrder / template 注册表与原生 document 模板。Markdown 在小程序中投影为安全语义节点，不解释原始 HTML。原生模板不是网页 A4 打印的像素级复刻。
 
-首版不含 PDF/DOCX 提取、PDF 导出、小程序支付、网站账户自动绑定、跨设备简历/聊天同步。JSON 可备份全部简历，不含完整对话。没有 token streaming。演示模式在设备本机执行；真实模式传输必要事实与上下文给既有服务端及模型，D1/DO 记录留存边界与网页一致。
+当前不含扫描件 OCR、旧版 DOC、PDF 导出、小程序支付、网站账户自动绑定、跨设备简历/聊天同步。JSON 可备份全部简历，不含完整对话。没有 token streaming。演示模式在设备本机执行；真实模式传输必要事实与上下文给既有服务端及模型，D1/DO 记录留存边界与网页一致。
 
 ## 身份与会话
 
@@ -87,3 +87,13 @@ TypeScript（网页及小程序）、88 项 Vitest 用例及 4 项配置测试�
 真机报告的动态函数 `.apply is not a function` 对应 Zod 对象校验的 JIT 编译。原生 `runtime.ts` 在创建领域 schema 前设置 `z.config({ jitless: true })`，App 和 Page 两个独立 bundle 都先加载配置；Web 与后端保持原配置。新增受限 Function 构造器回归用例，修复前复现 `factory is not a function`，修复后导入、校验和新对话均通过，且动态构造次数为零。
 
 移除 `app.json` 中的微信 `style: v2`，避免平台按钮预设覆盖项目自定义宽度与字重。欢迎卡片明确占满容器，正文使用可收缩的 flex 列，输入框图标保持 30px、JD 按钮按内容宽度显示。错误详情独立滚动，关闭按钮始终可见。95 项单元测试通过；390px 浏览器近似布局验证通过，不能代替微信真机验收。
+
+### 第一份简历导入（2026-11-16）
+
+登录后空简历库在对话区显示“先导入第一份简历”，主入口为 Word（DOCX）/PDF。选择文件后保留可编辑原文，点击“整理为简历”才发起原有 import Agent 请求；取消、失败、迟到响应或切换身份不创建简历、不覆盖已有原文。账户中的 JSON 操作收纳在“备份与恢复”。
+
+小程序使用 `wx.chooseMessageFile` 选择聊天文件，受限读取后经 Bearer 会话调用 `/api/wechat-mini/document?type=pdf|docx`。文件在服务端内存中临时解析，无附件持久化、不传模型、不写简历或计费账本。PDF 使用 unpdf 的 serverless PDF.js；CJK CMap 从既有本站静态资源读取。DOCX 使用流式 unzip 与 SAX 提取正文，不读取外链、图片、字段指令，不支持 DTD。实际解压的正文 XML 同时受文件上限与解压上限约束。文件大小、页数、文字长度与解析超时沿用 `.env` 的 IMPORT_*；拒绝损坏、加密、超限及无文字 PDF。Word/PDF 提取只恢复文字阅读顺序，不承诺复杂版式还原。
+
+Web 保持浏览器本机解析；其主选择器仅突出 PDF/DOCX，TXT/Markdown 和 Folio JSON 移到折叠的其他导入方式。该改动只针对 `cn` Web 与小程序，不合并到 `main`。
+
+导入版本验证：104 项单元测试和 18 项 Web 浏览器回归通过。Cloudflare 本地生产预览使用合成会话，DOCX、英文 PDF、中文 PDF 均通过真实 HTTP 解析请求（200，原文包含预期测试姓名）；未鉴权请求返回 401。小程序使用受限动态函数环境测试，覆盖核对前不调用 Agent、取消后丢弃迟到解析结果。手机选择文件与真实个人文档仍需真机验收。

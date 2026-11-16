@@ -15,7 +15,7 @@ export function ChatWelcome(props: Props) {
         <span className="welcome-mark" aria-hidden="true">
           f.
         </span>
-        <h2>今天先改哪一块？</h2>
+        <h2>{props.needsImport ? '先导入第一份简历' : '今天先改哪一块？'}</h2>
       </div>
       <div className="welcome-actions">
         <button
@@ -35,9 +35,9 @@ export function ChatWelcome(props: Props) {
           </span>
           <span className="welcome-copy">
             <strong>
-              {props.needsImport ? '导入已有简历' : '导入另一份简历'}
+              {props.needsImport ? '导入第一份简历' : '导入另一份简历'}
             </strong>
-            <span>拖入 PDF / Word 或直接贴经历，整理成好改的底稿</span>
+            <span>选择 Word（DOCX）或 PDF，核对原文后整理为简历</span>
           </span>
           <ArrowUpRight size={15} aria-hidden="true" />
         </button>

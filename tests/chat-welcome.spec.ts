@@ -35,7 +35,7 @@ test('新对话图示引导复用操作，保留输入，发送后收起，刷�
     localStorage.getItem('folio:resumes:v1:guest'),
   )
   await page.screenshot({ path: '/tmp/folio-chat-welcome-desktop.png' })
-  await guide.getByRole('button', { name: /导入已有简历/ }).click()
+  await guide.getByRole('button', { name: /导入第一份简历/ }).click()
   await expect(page.getByRole('dialog', { name: '导入简历' })).toBeVisible()
   await page.keyboard.press('Escape')
   await guide.getByRole('button', { name: /按 JD 定制投递版本/ }).click()
@@ -96,6 +96,6 @@ test('空库与手机引导不遮挡输入框，未导入时禁用修改和定�
   await page.locator('.chat-scroll').evaluate((element) => {
     element.scrollTop = 0
   })
-  await guide.getByRole('button', { name: /导入已有简历/ }).click()
+  await guide.getByRole('button', { name: /导入第一份简历/ }).click()
   await expect(page.getByRole('dialog', { name: '导入简历' })).toBeVisible()
 })

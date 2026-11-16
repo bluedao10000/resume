@@ -37,7 +37,7 @@ import {
   resumeTemplates,
   templateDefinition,
 } from '../domain/resume-presentation'
-import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
+import { ImportLimitsSchema } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
 import {
@@ -1270,9 +1270,9 @@ function Workspace({
           {modal === 'import' ? (
             <label className="upload-zone">
               <FilePlus2 size={22} />
-              <strong>选择简历文件</strong>
+              <strong>选择 Word / PDF 简历</strong>
               <span>
-                PDF、DOCX、TXT、MD、JSON
+                Word（DOCX）或 PDF
                 {config.importLimits
                   ? ` · 最大 ${Math.round(config.importLimits.maxFileBytes / 1024 / 1024)}MB`
                   : ''}
@@ -1280,13 +1280,35 @@ function Workspace({
               <input
                 type="file"
                 aria-label="选择简历文件"
-                accept={documentAccept}
+                accept=".pdf,.docx"
                 onChange={(e) => {
                   void importFile(e.target.files?.[0])
                   e.target.value = ''
                 }}
               />
             </label>
+          ) : null}
+          {modal === 'import' ? (
+            <div className="import-secondary">
+              <p className="modal-description">
+                文件在当前浏览器提取文字，不上传原附件。核对下方原文后，再点击“整理为简历”。也可以直接粘贴经历。
+              </p>
+              <details>
+                <summary>其他导入方式 / 恢复 Folio 备份</summary>
+                <label className="backup-upload">
+                  选择 TXT、Markdown 或已有的 Folio JSON 备份
+                  <input
+                    type="file"
+                    aria-label="恢复备份或导入文本"
+                    accept=".txt,.md,.json"
+                    onChange={(e) => {
+                      void importFile(e.target.files?.[0])
+                      e.target.value = ''
+                    }}
+                  />
+                </label>
+              </details>
+            </div>
           ) : null}
           {modal === 'import' ? (
             <Suspense fallback={<p role="status">正在加载编辑器…</p>}>
@@ -1301,7 +1323,8 @@ function Workspace({
           ) : (
             <>
               <p className="modal-description">
-                基于 {resume.name} 的简历库生成独立版本，保留原简历，不改动底稿。
+                基于 {resume.name}{' '}
+                的简历库生成独立版本，保留原简历，不改动底稿。
               </p>
               <label className="modal-input-label">
                 岗位描述（JD）

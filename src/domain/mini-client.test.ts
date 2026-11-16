@@ -19,6 +19,9 @@ function client(storage = new Map<string, unknown>(), restricted = false) {
   })
   let page: any
   const wx = {
+    request: vi.fn(),
+    chooseMessageFile: vi.fn(),
+    getFileSystemManager: vi.fn(),
     getStorageSync: (key: string) => storage.get(key) ?? '',
     setStorageSync: vi.fn((key: string, value: unknown) =>
       storage.set(key, JSON.parse(JSON.stringify(value))),
@@ -148,4 +151,86 @@ it('runs parsing, rendering and edits when the native sandbox cannot construct f
   page.newChat()
   expect(page.data.error).toBe('')
   expect(dynamicFunction).not.toHaveBeenCalled()
+})
+
+it('keeps the first resume import in chat and requires explicit confirmation before generating', async () => {
+  const { page, wx } = client()
+  page.demo()
+  const count = page.data.resumes.length
+  const writes = wx.setStorageSync.mock.calls.length
+  page.data.tab = 'account'
+  page.openImport()
+  expect(page.data.tab).toBe('chat')
+  expect(page.data.importOpen).toBe(true)
+  page.inputImport({ detail: { value: '测试人物\n开发者\n熟悉 React' } })
+  expect(wx.setStorageSync.mock.calls.length).toBe(writes)
+  page.closeImport()
+  expect(page.data.resumes).toHaveLength(count)
+  page.openImport()
+  await page.confirmImport()
+  expect(page.data.importOpen).toBe(false)
+  expect(page.data.selected.name).toBe('测试人物')
+  expect(page.data.resumes).toHaveLength(count + 1)
+})
+
+it('discards a document response after cancelling and never sends extraction directly to the Agent', async () => {
+  const storage = new Map<string, unknown>([
+    [
+      'folio:mini:auth',
+      {
+        token: 'fixture-token',
+        user: { id: 'fixture-user' },
+        expiresAt: Date.now() + 100000,
+      },
+    ],
+  ])
+  const { page, wx } = client(storage)
+  let finish: (result: unknown) => void = () => {}
+  const abort = vi.fn()
+  wx.request.mockImplementation((options) => {
+    if (options.url.includes('/document?')) {
+      finish = options.success
+      return { abort }
+    }
+    options.success({
+      statusCode: 200,
+      data: options.url.endsWith('/config')
+        ? {
+            mode: 'live',
+            runtime: 'pi-durable',
+            loginEnabled: true,
+            importLimits: {
+              maxFileBytes: 100000,
+              maxPages: 30,
+              maxTextCharacters: 20000,
+              timeoutMs: 20000,
+              maxExpandedBytes: 200000,
+            },
+          }
+        : { user: { id: 'fixture-user' } },
+    })
+    return { abort }
+  })
+  wx.chooseMessageFile.mockImplementation((options) =>
+    options.success({
+      tempFiles: [{ name: 'resume.pdf', path: '/synthetic.pdf', size: 10 }],
+    }),
+  )
+  wx.getFileSystemManager.mockReturnValue({
+    readFile: (options: any) => options.success({ data: new ArrayBuffer(10) }),
+  })
+  await page.onLoad()
+  expect(page.data.resumes).toHaveLength(0)
+  page.openImport()
+  page.chooseDocument()
+  page.closeImport()
+  finish({ statusCode: 200, data: { text: '迟到的原文' } })
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(abort).toHaveBeenCalled()
+  expect(page.data.importText).toBe('')
+  expect(page.data.resumes).toHaveLength(0)
+  expect(wx.request.mock.calls.some(([o]) => o.url.includes('/agent'))).toBe(
+    false,
+  )
 })

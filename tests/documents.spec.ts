@@ -66,7 +66,7 @@ test('真实 DOCX 提取标题、强调和列表，核对前不调用 Agent', as
   await expect(original.locator('h3')).toHaveText('核心工作')
   await expect(original.locator('li')).toContainText('主导平台')
   expect(requests).toHaveLength(0)
-  await page.getByRole('button', { name: '整理为简历' }).click()
+  await page.getByRole('button', { name: '整理为简历', exact: true }).click()
   await expect(page.locator('.preview-panel .resume-heading h1')).toHaveText(
     '测试候选人',
   )
@@ -91,7 +91,9 @@ for (const [file, text] of [
     await expect(
       page.getByRole('textbox', { name: '简历原文', exact: true }),
     ).toContainText(text)
-    await expect(page.getByRole('button', { name: '整理为简历' })).toBeEnabled()
+    await expect(
+      page.getByRole('button', { name: '整理为简历', exact: true }),
+    ).toBeEnabled()
     expect(errors).toEqual([])
   })
 }

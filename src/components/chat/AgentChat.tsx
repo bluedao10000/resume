@@ -227,7 +227,10 @@ export function AgentChat(props: Props) {
       runtime.thread.append({
         role: 'assistant',
         content: [
-          { type: 'text', text: '刚才那次生成中断了，麻烦重新发一下你的要求。' },
+          {
+            type: 'text',
+            text: '刚才那次生成中断了，麻烦重新发一下你的要求。',
+          },
         ],
       })
     }
@@ -248,7 +251,11 @@ export function AgentChat(props: Props) {
     <AssistantRuntimeProvider runtime={runtime}>
       <ThreadPrimitive.Root className="chat-root">
         <ThreadPrimitive.Viewport className="chat-scroll">
-          <AuiIf condition={(s) => s.thread.isEmpty && !s.thread.isRunning}>
+          <AuiIf
+            condition={(s) =>
+              (!props.hasResume || s.thread.isEmpty) && !s.thread.isRunning
+            }
+          >
             <ChatWelcome
               needsImport={needsImport}
               hasResume={props.hasResume}

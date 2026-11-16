@@ -86,4 +86,4 @@ Agent 模型访问基于 `@earendil-works/pi-ai@1.5.2`。`.env` 的 `AGENT_RUNTI
 
 ## 微信小程序（cn 分支 · wechat-mini）
 
-原生客户端位于 `wechat-mini/`。运行 `npm run build:wechat`，在微信开发者工具中导入该目录。支持对话、文字导入、JD 定制、本机简历库、编辑、预览和 JSON 备份。独立微信登录复用现有服务端 Agent 与计费规则；AppSecret 与后端迁移/部署完成后才能真实联调。首版不含小程序支付与 PDF 导出。参见[小程序架构与启动](docs/architecture/wechat-mini.md)。
+原生客户端位于 `wechat-mini/`。运行 `npm run build:wechat`，在微信开发者工具中导入该目录。支持对话、Word（DOCX）/PDF/文字导入及原文核对、JD 定制、本机简历库、编辑、预览和 JSON 备份。独立微信登录复用现有服务端 Agent 与计费规则；AppSecret 与后端迁移/部署完成后才能真实联调。首版不含小程序支付与 PDF 导出。参见[小程序架构与启动](docs/architecture/wechat-mini.md)。

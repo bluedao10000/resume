@@ -132,3 +132,31 @@ it('rejects provider errors, unconfigured login, forged tokens and client identi
       ?.count,
   ).toBe(0)
 })
+
+it('requires a mini session for document extraction and returns review text without generating a resume', async () => {
+  const { env, provider } = setup()
+  expect(
+    (await miniApi(req('document?type=docx', 'POST', {}), env, provider))
+      .status,
+  ).toBe(401)
+  const login = await miniApi(
+    req('login', 'POST', { code: 'document-login' }),
+    env,
+    provider,
+  )
+  const { token } = (await login.json()) as { token: string }
+  const response = await miniApi(
+    new Request('https://example.com/api/wechat-mini/document?type=docx', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: readFileSync('tests/fixtures/resume.docx'),
+    }),
+    env,
+    provider,
+  )
+  expect(response.status).toBe(200)
+  expect(await response.json()).toEqual({
+    text: expect.stringContaining('测试候选人'),
+  })
+  expect(response.headers.get('cache-control')).toBe('no-store')
+})
