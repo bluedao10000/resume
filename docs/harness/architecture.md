@@ -114,3 +114,5 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 国内版通过 `APP_MARKET=cn` 选择 Better Auth 微信网站登录和微信支付 APIv3。D1 通过支付订单提供有效期内的付费权益，两个 Agent runtime 共用原有用量账本。[国内版微信开通](operations.md#国内版微信开通)
 
 邮箱验证码和 GitHub 登录沿用同一个 Better Auth 会话。GitHub 的 OAuth 回调由 Better Auth 处理，应用回跳时重新读取会话。邮箱验证码使用现有 D1 verification 表，Worker 通过 Resend 发送登录验证码。
+
+国内登录弹窗使用 Better Auth 现有授权地址生成微信官方嵌入二维码参数，扫码确认由微信跳转到原有回调，工作台只根据有效会话打开。二维码状态只接受对应微信 iframe 的就绪消息。组件超时后可重试，加载失败可打开原授权页。邮箱重发沿用原发码接口。

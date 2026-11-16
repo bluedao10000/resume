@@ -40,7 +40,11 @@ import {
 import { ImportLimitsSchema, documentAccept } from '../domain/document-import'
 import { Modal } from '../components/Modal'
 import { ConfirmDelete } from '../components/ConfirmDelete'
-import { LoginMethods, type SocialProvider } from '../components/LoginMethods'
+import {
+  LoginMethods,
+  type SocialProvider,
+  type SocialLogin,
+} from '../components/LoginMethods'
 import { LandingPage, landingFaq } from '../components/LandingPage'
 import { BillingPanel } from '../components/BillingPanel'
 import { AccountDetails } from '../components/AccountDetails'
@@ -193,7 +197,7 @@ function Entry() {
   const [configError, setConfigError] = useState(false)
   const [demoOpen, setDemoOpen] = useState(false)
   const [loginOpen, setLoginOpen] = useState(false)
-  const [loginBusy, setLoginBusy] = useState(false)
+  const [loginBusy, setLoginBusy] = useState<SocialProvider | null>(null)
   const [loginError, setLoginError] = useState('')
   useEffect(() => {
     if (readPendingEmailLogin()) setLoginOpen(true)
@@ -229,21 +233,28 @@ function Entry() {
     }
     return () => controller.abort()
   }, [])
-  async function login(provider: SocialProvider) {
-    setLoginBusy(true)
+  const login: SocialLogin = async (provider, signal) => {
+    if (loginBusy) return
+    setLoginBusy(provider)
     setLoginError('')
     try {
-      const response = await authClient.signIn.social({
-        provider,
-        ...(provider !== 'google' && { errorCallbackURL: '/?loginFailed=1' }),
-        callbackURL: provider === 'github' ? '/auth/callback' : '/',
-      })
-      if (response.error)
-        setLoginError(response.error.message ?? '登录失败，请重试。')
+      const response = await authClient.signIn.social(
+        {
+          provider,
+          ...(provider !== 'google' && { errorCallbackURL: '/?loginFailed=1' }),
+          callbackURL: provider === 'github' ? '/auth/callback' : '/',
+          ...(signal && { disableRedirect: true }),
+        },
+        { signal },
+      )
+      if (signal?.aborted) return
+      if (signal && response.data?.url) return response.data.url
+      if (response.error || signal)
+        setLoginError(response.error?.message ?? '登录失败，请重试。')
     } catch {
-      setLoginError('无法连接登录服务，请重试。')
+      if (!signal?.aborted) setLoginError('无法连接登录服务，请重试。')
     } finally {
-      setLoginBusy(false)
+      setLoginBusy(null)
     }
   }
   useEffect(() => {
@@ -285,7 +296,7 @@ function Entry() {
       <LandingPage
         ready={false}
         canLogin={false}
-        isLoading={loginBusy}
+        isLoading={!!loginBusy}
         error={loginError}
         onLogin={() => void login('google')}
       />
@@ -301,7 +312,7 @@ function Entry() {
           ready
           opensLoginDialog={usesLoginDialog}
           canLogin={email || social.length > 0}
-          isLoading={!usesLoginDialog && loginBusy}
+          isLoading={!usesLoginDialog && !!loginBusy}
           error={usesLoginDialog ? '' : loginError}
           onLogin={() => {
             if (usesLoginDialog) setLoginOpen(true)
@@ -323,6 +334,7 @@ function Entry() {
         {loginOpen && usesLoginDialog ? (
           <Modal
             title="登录 Folio"
+            className={config.market === 'cn' ? 'login-dialog' : undefined}
             onClose={() => {
               clearPendingEmailLogin()
               setLoginOpen(false)
@@ -333,7 +345,8 @@ function Entry() {
               email={email}
               busy={loginBusy}
               error={loginError}
-              onLogin={(provider) => void login(provider)}
+              onLogin={login}
+              china={config.market === 'cn'}
             />
           </Modal>
         ) : null}
@@ -363,9 +376,9 @@ function Workspace({
 }: {
   session: Session | null
   config: Config
-  onLogin: (provider: SocialProvider) => Promise<void>
+  onLogin: SocialLogin
   onSignOut: () => Promise<void>
-  loginBusy: boolean
+  loginBusy: SocialProvider | null
   loginError: string
 }) {
   const [resumes, setResumes] = useState<Resume[]>([])
@@ -1365,7 +1378,13 @@ function Workspace({
         </Modal>
       ) : null}
       {modal === 'login' ? (
-        <Modal title={session ? '账户' : '登录'} onClose={() => setModal(null)}>
+        <Modal
+          title={session ? '账户' : '登录 Folio'}
+          className={
+            !session && config.market === 'cn' ? 'login-dialog' : undefined
+          }
+          onClose={() => setModal(null)}
+        >
           {session ? (
             <AccountDetails
               user={session.user}
@@ -1397,7 +1416,8 @@ function Workspace({
               email={config.authMethods?.email ?? false}
               busy={loginBusy}
               error={loginError}
-              onLogin={(provider) => void onLogin(provider)}
+              onLogin={onLogin}
+              china={config.market === 'cn'}
             />
           )}
         </Modal>

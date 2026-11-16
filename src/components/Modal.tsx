@@ -5,7 +5,9 @@ export function Modal({
   onClose,
   children,
   initialFocusRef,
+  className,
 }: {
+  className?: string
   title: string
   onClose: () => void
   children: React.ReactNode
@@ -26,7 +28,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={className ? `modal ${className}` : 'modal'}
       onCancel={onClose}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
