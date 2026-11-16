@@ -221,6 +221,29 @@ npm run deploy
 
 参考[微信支付 Native 开发指引](https://pay.wechatpay.cn/doc/v3/merchant/4012791891)、[支付成功通知](https://pay.wechatpay.cn/doc/v3/merchant/4012791882)及[商户订单号查单](https://pay.wechatpay.cn/doc/v3/merchant/4012791880)。
 
+### 网站扫码登录（无需开通微信支付）
+
+codeiy 网站应用 AppID 为 `wxe4d137338b962c85`。在项目根 `.env` 设置：
+
+```dotenv
+APP_MARKET=cn
+BETTER_AUTH_URL=https://www.codeiy.com
+WECHAT_APP_ID=wxe4d137338b962c85
+WECHAT_APP_SECRET=在本机填写开放平台生成的AppSecret
+```
+
+开放平台的「授权回调域」填写 `www.codeiy.com`，不带协议或路径；实际 OAuth 回调为 `https://www.codeiy.com/api/auth/callback/wechat`。应用官网字段不代替授权回调域配置。保留已有 `BETTER_AUTH_SECRET`，避免使现有会话和加密的 OAuth token 失效。
+
+登录独立于微信支付，开通扫码登录不需要填写 `WECHAT_PAY_*`。两项登录凭据齐备后，公开配置启用首页弹窗的「使用微信登录」，跳转微信官方二维码页。服务端使用 Better Auth 内置网站应用 provider，默认请求 `snsapi_login`，校验 state 与浏览器 cookie，并在 D1 创建或恢复用户会话。微信不提供真实邮箱，占位邮箱不作为已验证邮箱，也不自动合并其他登录身份。
+
+发布仍使用 `.env` → `npm run deploy` 的既有流程，AppSecret 只同步到 Worker secrets。先确认目标为 `codeiy-main-site` / `folio-cn`；配置修改不会自动更新线上 Worker。
+
+`src/server/wechat-auth.test.ts` 使用模拟微信接口验证二维码授权参数、回调会话、同一账号重复登录、非法 state、缺失 cookie 与无效 code，以及 token 加密保存。真实验收仍需在授权域名扫码确认，检查回到工作台、退出后重新登录，以及同一用户本机简历分区保持一致。模拟测试不代表开放平台真实授权已完成。
+
+2026-11-16 国内站已发布微信登录配置，Worker `codeiy-main-site` 版本 `7ef1f4f7-82ef-473d-bc2f-4f18e46e274c`。真实验证：线上公开配置已启用微信登录，首页弹窗入口可见；用户已用微信扫码并确认成功回到工作台。自动化浏览器受微信授权域名安全策略限制，扫码及最终回跳由用户完成并反馈，未宣称自动化完成全流程。
+
+参考 [Better Auth 微信网站登录](https://better-auth.com/docs/authentication/wechat)。
+
 ### codeiy 国内站部署
 
 2026-11-14 发布到 `codeiy-main-site`。主站为 `https://www.codeiy.com`，根域名

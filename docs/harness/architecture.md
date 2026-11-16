@@ -111,7 +111,7 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 
 `domain/billing.ts` 定义整数费率与用量，`server/billing.ts` 管理 D1 原子预留与结算；pi adapter fetch 边界执行预算检查，durable DO 从持久化 transcript 结算。Stripe 独立维护订阅权益，不访问简历组件。完整流程见 [计费架构与恢复](../architecture/billing.md)。
 
-国内版通过 `APP_MARKET=cn` 选择 Better Auth 微信网站登录和微信支付 APIv3。D1 通过支付订单提供有效期内的付费权益，两个 Agent runtime 共用原有用量账本。[国内版微信开通](operations.md#国内版微信开通)
+国内版通过 `APP_MARKET=cn` 选择 Better Auth 微信网站登录和微信支付 APIv3。登录与支付配置独立；网站登录使用官方二维码页、`snsapi_login` 和 `/api/auth/callback/wechat` 回调，state/cookie 校验及会话由 Better Auth 管理，OAuth token 加密保存在 D1。D1 通过支付订单提供有效期内的付费权益，两个 Agent runtime 共用原有用量账本。[国内版微信开通](operations.md#国内版微信开通)
 
 邮箱验证码和 GitHub 登录沿用同一个 Better Auth 会话。GitHub 的 OAuth 回调由 Better Auth 处理，应用回跳时重新读取会话。邮箱验证码使用现有 D1 verification 表，Worker 通过 Resend 发送登录验证码。
 

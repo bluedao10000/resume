@@ -61,6 +61,7 @@ export function getAuth() {
           wechat: {
             clientId: config.WECHAT_APP_ID,
             clientSecret: config.WECHAT_APP_SECRET,
+            lang: 'cn',
           },
         }),
       ...(methods.market &&

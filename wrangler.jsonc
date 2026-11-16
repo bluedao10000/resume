@@ -1,8 +1,8 @@
 // Generated from .env by scripts/configure.mjs. Do not edit.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "folio-resume-agent",
-  "account_id": "9d57abc6c216e0ca3ed82fb41a59314b",
+  "name": "codeiy-main-site",
+  "account_id": "61095a52cd791712f9f3b13167f8a747",
   "main": "./src/worker.ts",
   "compatibility_date": "2026-11-14",
   "compatibility_flags": [
@@ -14,17 +14,11 @@
     "binding": "ASSETS",
     "directory": "./dist/client"
   },
-  "analytics_engine_datasets": [
-    {
-      "binding": "ANALYTICS",
-      "dataset": "folio_events"
-    }
-  ],
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "folio",
-      "database_id": "edd94c24-ba7f-4161-a8bf-6fcfaa5a50f8",
+      "database_name": "folio-cn",
+      "database_id": "23287ed4-8f9a-43d2-88b5-e309a364a94f",
       "migrations_dir": "migrations"
     }
   ],
@@ -46,57 +40,40 @@
   ],
   "routes": [
     {
-      "pattern": "r.story2u.xyz",
+      "pattern": "www.codeiy.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "codeiy.com",
       "custom_domain": true
     }
   ],
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "keep_vars": false,
   "vars": {
-    "IMPORT_MAX_FILE_BYTES": "10485760",
-    "IMPORT_MAX_PDF_PAGES": "30",
-    "IMPORT_MAX_TEXT_CHARACTERS": "20000",
-    "IMPORT_TIMEOUT_MS": "20000",
-    "IMPORT_MAX_EXPANDED_BYTES": "52428800",
-    "BILLING_FREE_MONTHLY_CENTS": "0",
-    "BILLING_PLUS_MONTHLY_CENTS": "1000",
-    "BILLING_PRO_MONTHLY_CENTS": "5000",
-    "BILLING_FREE_CREDITS": "10",
-    "BILLING_PLUS_CREDITS": "125",
-    "BILLING_PRO_CREDITS": "625",
-    "BILLING_MODEL": "gpt-6.1-sol",
-    "BILLING_TARIFF_VERSION": "2026-11-14-standard-v1",
-    "BILLING_INPUT_CREDITS_PER_MILLION": "50",
-    "BILLING_OUTPUT_CREDITS_PER_MILLION": "250",
-    "BILLING_CACHE_READ_CREDITS_PER_MILLION": "2.5",
-    "BILLING_CACHE_WRITE_CREDITS_PER_MILLION": "62.5",
-    "BILLING_INPUT_RESERVE_MULTIPLIER": "2",
-    "BILLING_MIN_OUTPUT_TOKENS": "1024",
-    "BILLING_MAX_CONCURRENT_RUNS": "2",
-    "STRIPE_PLUS_PRICE_ID": "",
-    "STRIPE_PRO_PRICE_ID": "",
-    "STRIPE_PORTAL_CONFIGURATION_ID": "",
-    "STRIPE_API_BASE_URL": "https://api.stripe.com/v1",
-    "STRIPE_API_VERSION": "2025-03-31.basil",
-    "STRIPE_TIMEOUT_MS": "10000",
-    "STRIPE_SYNC_LOCK_MS": "30000",
-    "STRIPE_WEBHOOK_TOLERANCE_SECONDS": "300",
-    "STRIPE_CHECKOUT_TTL_SECONDS": "1800",
+    "WECHAT_APP_ID": "wxe4d137338b962c85",
+    "APP_MARKET": "cn",
     "APP_MODE": "live",
-    "BETTER_AUTH_URL": "https://r.story2u.xyz",
-    "AI_BASE_URL": "https://api.openai.com/v1",
-    "AI_MODEL": "gpt-6.1-sol",
-    "AGENT_RUNTIME": "pi-durable",
-    "AGENT_TIMEOUT_MS": "45000",
-    "AI_CONTEXT_WINDOW": "128000",
-    "AI_MAX_OUTPUT_TOKENS": "12000",
-    "AI_MODEL_REASONING": "true",
-    "AI_API": "openai-responses",
-    "AI_REASONING_EFFORT": "low"
+    "BETTER_AUTH_URL": "https://www.codeiy.com",
+    "GITHUB_CLIENT_ID": "Ov23likkUgOXVEcErusn",
+    "AUTH_EMAIL_FROM": "Folio <login@auth.codeiy.com>",
+    "ALIPAY_MODE": "production",
+    "ALIPAY_APP_ID": "2021007120653083",
+    "ALIPAY_PUBLIC_KEY": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3nrlrDQ9Y6ruc0LYKfPvPCVxGx/AljC0G0mAF/jYY+mBemRuLLLLnnRli61pGi1NwkdsCdIEZPTyM3TbfbR7z7kuuSrEn4gO7x2Ji1YImb6eEK3syZ80iyhIpvaec+WQZ7zIFpvzuim+7GQ048+grD62lhbnd7EvChpbCabgsWga7rGL9MP0Z4vM2q0DNz6//w35A25m4mGyiVUuCkXOuyB8cdYsFQPAVDlYRYqN0SvM2CyD7DYYUcUyNM5DsHU9J1P5Vywm9dZv7xWbriUVVp2kkQqLnsW77Tw36z4bphZyA46R2KdvjMTL8teAp9qPFVUoQErCnkPTWm3Su0vwFQIDAQAB",
+    "ALIPAY_SELLER_ID": "2088002913574564",
+    "ALIPAY_NOTIFY_URL": "https://www.codeiy.com/api/billing/alipay/notify"
   },
   "secrets": {
     "required": [
       "BETTER_AUTH_SECRET",
-      "GOOGLE_CLIENT_ID",
-      "GOOGLE_CLIENT_SECRET",
+      "GITHUB_CLIENT_SECRET",
+      "AUTH_RESEND_API_KEY",
+      "ALIPAY_PRIVATE_KEY",
+      "WECHAT_APP_SECRET",
       "AI_API_KEY"
     ]
   },
