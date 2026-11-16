@@ -169,7 +169,7 @@ export function LoginMethods({
       {!subview && (
         <>
           {china && (
-            <p className="login-subtitle">选择一种方式继续使用 Folio</p>
+            <p className="login-subtitle">选个顺手的方式登录 Folio</p>
           )}
           {wechat && socialButton('wechat')}
           {wechat && (other.length > 0 || email) && (
@@ -258,8 +258,8 @@ export function LoginMethods({
         <section className="login-policy">
           <h3>用户协议</h3>
           <p>
-            请仅导入你有权使用的资料。Folio
-            可协助整理和改写简历，请在导出或投递前核对内容。简历和对话保存在当前浏览器，请自行备份。
+            请仅导入你有权使用的个人经历与资料。Folio
+            帮你整理和改写简历表达，正式导出或投递前请务必自行核对。简历库与聊天记录默认存在当前浏览器，请记得定期导出备份。
           </p>
         </section>
       )}
@@ -268,9 +268,9 @@ export function LoginMethods({
           <h3>隐私政策</h3>
           <p>
             Folio
-            使用登录服务提供的身份信息建立会话。完整简历库与对话按账号保存在当前浏览器。使用
+            仅使用登录服务返回的基础身份信息建立会话。你的完整简历库和对话记录按账号隔离保存在当前浏览器。调用
             AI
-            时，处理所需的内容会发送到服务端及模型服务，服务端可能保留请求处理记录或结果。
+            时，改写所需的原文与上下文会发往服务端及模型接口，服务端可能留存请求处理记录或结果。
           </p>
         </section>
       )}

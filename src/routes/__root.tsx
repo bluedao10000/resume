@@ -18,6 +18,7 @@ export const Route = createRootRoute({
     links: [
       { rel: 'stylesheet', href: css },
       { rel: 'icon', type: 'image/svg+xml', href: '/folio.svg' },
+      { rel: 'apple-touch-icon', sizes: '144x144', href: '/folio-144.png' },
     ],
   }),
   component: () => (

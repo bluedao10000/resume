@@ -138,14 +138,15 @@ export function AgentChat(props: Props) {
             }
             if (snapshot.status !== 'completed')
               throw new Error(
-                snapshot.error ?? 'Agent 未完成操作，当前简历已保留。',
+                snapshot.error ?? '刚才这步没跑完，不过当前简历还安全保留着。',
               )
             data = snapshot.result
           }
           if (!response.ok)
             throw new Error((data as { error?: string }).error ?? '请求失败')
           const parsed = AgentResultSchema.safeParse(data)
-          if (!parsed.success) throw new Error('返回的简历格式不完整，请重试。')
+          if (!parsed.success)
+            throw new Error('返回的数据格式不太对，麻烦再试一次。')
           const result = parsed.data
           if (abortSignal.aborted) return
           p.onResult(result)
@@ -165,7 +166,7 @@ export function AgentChat(props: Props) {
                 text:
                   error instanceof Error
                     ? error.message
-                    : '连接出现问题，请重试。',
+                    : '网络好像断了一下，稍后再试一次。',
               },
             ],
           }
@@ -225,7 +226,9 @@ export function AgentChat(props: Props) {
       current.current.onRequest(null)
       runtime.thread.append({
         role: 'assistant',
-        content: [{ type: 'text', text: '上次生成已中断，请重新发送要求。' }],
+        content: [
+          { type: 'text', text: '刚才那次生成中断了，麻烦重新发一下你的要求。' },
+        ],
       })
     }
   }, [props.runtimeMode, restoreRequest, runtime])
@@ -278,7 +281,7 @@ export function AgentChat(props: Props) {
                     ))}
                   </ul>
                   {props.result.keywords.length ? (
-                    <p>关键词：{props.result.keywords.join('、')}</p>
+                    <p>命中关键词：{props.result.keywords.join('、')}</p>
                   ) : null}
                 </div>
               </details>
@@ -298,10 +301,10 @@ export function AgentChat(props: Props) {
               aria-label="发送给 Folio"
               placeholder={
                 props.intent === 'tailor'
-                  ? '粘贴岗位描述…'
+                  ? '直接粘贴目标岗位的 JD…'
                   : props.intent === 'import'
-                    ? '粘贴你的简历或经历…'
-                    : '输入修改要求，或粘贴岗位描述（JD）…'
+                    ? '直接粘贴你的简历或工作经历…'
+                    : '聊聊你想怎么改，或直接粘贴岗位描述（JD）…'
               }
               rows={2}
               maxLength={20000}

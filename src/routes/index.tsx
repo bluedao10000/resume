@@ -78,7 +78,7 @@ import {
 const SITE_URL = 'https://www.codeiy.com'
 const SITE_TITLE = 'AI 简历定制：按岗位 JD 修改简历并导出 PDF｜Folio'
 const SITE_DESCRIPTION =
-  '导入已有简历，粘贴岗位描述（JD），用对话调整经历重点。Folio 帮你保留原稿、整理独立投递版本，核对修改和待补充信息后导出 PDF。支持 PDF、DOCX 导入，提供免费 AI 额度。'
+  '导进现有简历，贴上目标岗位描述（JD），用对话把匹配经历往前排、去掉空话套话。Folio 帮你保留原稿、单独生成投递版本，核对修改和待补充信息后即可导出 A4 PDF。支持 PDF、DOCX 导入，自带免费 AI 额度。'
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -943,7 +943,7 @@ function Workspace({
                   onPolish={() =>
                     run(
                       'polish',
-                      '帮我润色这份简历，保留真实经历，让表达更加清晰、有说服力。',
+                      '帮我润色这份简历，保留真实经历，去掉空话套话，把做过的事写得更具体。',
                     )
                   }
                   onBusy={setBusy}
@@ -1301,7 +1301,7 @@ function Workspace({
           ) : (
             <>
               <p className="modal-description">
-                基于 {resume.name} 的简历库生成独立版本，保留原简历。
+                基于 {resume.name} 的简历库生成独立版本，保留原简历，不改动底稿。
               </p>
               <label className="modal-input-label">
                 岗位描述（JD）
@@ -1311,7 +1311,7 @@ function Workspace({
                   maxLength={20000}
                   rows={9}
                   onChange={(e) => setText(e.target.value)}
-                  placeholder="岗位名称、公司、工作职责、任职要求…"
+                  placeholder="直接粘贴岗位名称、公司、工作职责、任职要求…"
                 />
               </label>
             </>
@@ -1325,7 +1325,7 @@ function Workspace({
                 setText(
                   modal === 'jd'
                     ? sampleJD
-                    : '陈亦舟\n前端工程师\nyizhou@example.com\n3 年前端开发经验，使用 React、TypeScript 构建企业协作平台。负责设计系统组件开发，与产品和设计团队协作交付核心功能。\n南京大学 · 软件工程 · 本科',
+                    : '陈亦舟\n前端工程师\nyizhou@example.com\n3 年前端开发经验，主要用 React、TypeScript 做企业协作平台。负责设计系统核心组件开发，日常和产品、设计搭档推进需求落地。\n南京大学 · 软件工程 · 本科',
                 )
               }
             >
@@ -1354,7 +1354,7 @@ function Workspace({
               <FileText size={23} />
               <div>
                 <strong>打印 / 保存为 PDF</strong>
-                <span>A4 排版 · 在打印面板选择“另存为 PDF”</span>
+                <span>标准 A4 排版 · 在打印窗口选「另存为 PDF」即可</span>
               </div>
               <ArrowRight size={17} />
             </button>
@@ -1367,13 +1367,13 @@ function Workspace({
               <ArrowDownToLine size={23} />
               <div>
                 <strong>导出结构化 JSON</strong>
-                <span>完整数据备份 · 可重新导入 Folio</span>
+                <span>本地完整备份 · 换设备时可随时导回 Folio</span>
               </div>
               <ArrowRight size={17} />
             </button>
           </div>
           <p className="field-hint">
-            长简历可自动跨页。建议在打印设置中关闭页眉和页脚。
+            多页长简历会自动分页。打印时建议关掉浏览器的「页眉和页脚」，版面更干净。
           </p>
         </Modal>
       ) : null}
@@ -1392,7 +1392,7 @@ function Workspace({
             />
           ) : (
             <p className="login-description">
-              演示简历仅保存在此浏览器，登录后使用独立空间。
+              试用草稿只保存在当前浏览器，登录后可进入你的独立简历空间。
             </p>
           )}
           {session ? (

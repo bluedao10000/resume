@@ -15,7 +15,7 @@ export function ChatWelcome(props: Props) {
         <span className="welcome-mark" aria-hidden="true">
           f.
         </span>
-        <h2>从这里开始</h2>
+        <h2>今天先改哪一块？</h2>
       </div>
       <div className="welcome-actions">
         <button
@@ -37,7 +37,7 @@ export function ChatWelcome(props: Props) {
             <strong>
               {props.needsImport ? '导入已有简历' : '导入另一份简历'}
             </strong>
-            <span>上传文档或粘贴经历，整理成可编辑的简历</span>
+            <span>拖入 PDF / Word 或直接贴经历，整理成好改的底稿</span>
           </span>
           <ArrowUpRight size={15} aria-hidden="true" />
         </button>
@@ -59,8 +59,8 @@ export function ChatWelcome(props: Props) {
             <strong>用对话修改简历</strong>
             <span>
               {props.hasResume
-                ? '润色表达、调整顺序，修改直接呈现在预览中'
-                : '导入后，可润色表达、调整内容顺序'}
+                ? '去套话、突出重点，改完右侧实时看效果'
+                : '导入简历后，可以直接聊怎么顺措辞、调顺序'}
             </span>
           </span>
           <ArrowUpRight size={15} aria-hidden="true" />
@@ -89,8 +89,8 @@ export function ChatWelcome(props: Props) {
             <strong>按 JD 定制投递版本</strong>
             <span>
               {props.hasResume
-                ? '粘贴岗位要求，生成独立版本并保留原简历'
-                : '导入后，按岗位要求生成独立投递版本'}
+                ? '贴入目标岗位 JD，单独拉一份投递稿，不改乱原简历'
+                : '导入简历后，可按目标 JD 单独生成投递版本'}
             </span>
           </span>
           <ArrowUpRight size={15} aria-hidden="true" />
