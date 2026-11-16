@@ -76,9 +76,10 @@ import {
   restoreResumeLibrary,
 } from '../domain/resume-library'
 const SITE_URL = 'https://www.codeiy.com'
-const SITE_TITLE = 'AI 简历定制：按岗位 JD 修改简历并导出 PDF｜Folio'
+const SITE_TITLE =
+  'Folio｜按岗位 JD 定制与润色简历的中文 AI 工具（支持导出 A4 PDF）'
 const SITE_DESCRIPTION =
-  '导进现有简历，贴上目标岗位描述（JD），用对话把匹配经历往前排、去掉空话套话。Folio 帮你保留原稿、单独生成投递版本，核对修改和待补充信息后即可导出 A4 PDF。支持 PDF、DOCX 导入，自带免费 AI 额度。'
+  '适合程序员、产品经理、设计师等一稿多投求职者的中文 AI 简历工具。导进已有简历、贴上目标岗位描述（JD），只基于真实经历重排重点、去掉空话套话，单列缺少依据的要求供核对，保留原稿并生成独立投递版本，支持 PDF、DOCX 本地导入与标准 A4 PDF 导出，自带免费 AI 额度。'
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -99,11 +100,12 @@ const structuredData = {
       inLanguage: 'zh-CN',
       description: SITE_DESCRIPTION,
       featureList: [
-        '对话式简历整理',
-        '按岗位描述定制简历',
-        'PDF、DOCX、TXT、Markdown、JSON 导入',
-        '简历模板与局部排版',
-        '浏览器 A4 PDF 与 JSON 导出',
+        '按岗位描述（JD）前置匹配经历并生成独立投递版本（保留原稿）',
+        '对话式去套话润色与右侧实时编辑联动',
+        '单列缺少依据的岗位要求与修改明细核对卡，不编造经历或虚构分数',
+        '浏览器本地提取 PDF、DOCX、TXT、Markdown、Folio JSON',
+        '4 套共享结构化数据的中文简历模板与局部排版密度调节',
+        '浏览器打印导出标准 A4 PDF 与本地结构化 JSON 备份',
       ],
       offers: { '@type': 'Offer', price: '0', priceCurrency: 'CNY' },
     },
