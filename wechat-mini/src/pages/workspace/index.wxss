@@ -564,7 +564,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1;
+  flex: 1 1 0%;
+  width: 0;
   min-width: 0;
 }
 .welcome-title {
@@ -1297,4 +1298,36 @@
 }
 .welcome-file {
   white-space: nowrap;
+}
+
+/* Explicit native flex sizes: never inherit platform button width presets. */
+.welcome-actions {
+  width: 100%;
+}
+.welcome-action {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  flex-shrink: 0;
+  font-weight: 400;
+}
+.welcome-title,
+.welcome-description {
+  width: 100%;
+  white-space: normal;
+  word-break: normal;
+}
+.welcome-description {
+  font-weight: 400;
+}
+.composer-jd {
+  width: auto;
+  flex: none;
+  font-weight: 400;
+}
+.icon-button,
+.send-button {
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
 }

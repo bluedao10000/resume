@@ -74,7 +74,7 @@
     </view>
     <view wx:if="{{drawer}}" class="drawer-backdrop" bindtap="openDrawer"/><view wx:if="{{drawer}}" class="drawer"><text class="title">Folio</text><button bindtap="newChat" disabled="{{pending}}">新对话</button><button bindtap="history" disabled="{{pending}}">历史对话</button><button data-tab="preview" bindtap="navigate">简历预览</button><button data-tab="account" bindtap="navigate">账户与备份</button><button bindtap="openDrawer">关闭导航</button></view>
   </view>
-  <view wx:if="{{error}}" class="error" aria-role="alert"><text selectable>{{error}}</text><button size="mini" bindtap="dismissError">关闭</button></view>
+  <view wx:if="{{error}}" class="error" aria-role="alert"><scroll-view scroll-y class="error-details"><text selectable>{{error}}</text></scroll-view><button size="mini" bindtap="dismissError">关闭</button></view>
   <view wx:if="{{edit}}" class="edit-modal"><scroll-view scroll-y class="editor"><view class="panel-body">
     <text class="title">编辑简历</text>
     <label>姓名<input value="{{edit.name}}" data-field="name" bindinput="editField"/></label>

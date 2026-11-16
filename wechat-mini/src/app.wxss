@@ -28,6 +28,10 @@ scroll-view {
   box-sizing: border-box;
 }
 button {
+  width: auto;
+  height: auto;
+  font-weight: 400;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -120,4 +124,25 @@ textarea {
 }
 .error button {
   margin-top: 8px;
+}
+
+/* Keep the dismiss action visible even for a long native diagnostic. */
+.error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-height: 120px;
+}
+.error-details {
+  flex: 1;
+  min-width: 0;
+  max-height: 96px;
+}
+.error-details text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.error button {
+  flex: none;
+  margin: 0;
 }

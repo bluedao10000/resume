@@ -81,3 +81,9 @@ TypeScript（网页及小程序）、88 项 Vitest 用例及 4 项配置测试�
 `cn` 现在同时维护 Web、小程序及后端。原生客户端统一放在 `wechat-mini/`，根目录 npm scripts、领域测试、CI staging 和忽略规则均使用新路径。Web `/api/agent` 与小程序 `/api/wechat-mini/agent` 共享 `src/server/agent-handler.ts`，仅认证入口不同；配置、领域规则、计费和 Durable Object 运行时共用，客户端本机库仍按身份隔离。迁移不会自动部署生产 API 或迁移线上数据库。
 
 当前使用已存在的 `worktrees/cn` 工作区，以保留该工作区尚未提交的 Web 文案改动；其本机 `.env` 链接到仓库原有根 `.env`，没有复制另一套密钥。验证通过 Web / 小程序类型检查、94 项单元测试、Web 生产构建和 `wx:prepare`。上传项目目录由 `wechat-mini/project.config.json` 的 `miniprogramRoot` 解析，构建产物为 `wechat-mini/dist/`。
+
+### 真机运行与按钮样式修复（2026-11-16）
+
+真机报告的动态函数 `.apply is not a function` 对应 Zod 对象校验的 JIT 编译。原生 `runtime.ts` 在创建领域 schema 前设置 `z.config({ jitless: true })`，App 和 Page 两个独立 bundle 都先加载配置；Web 与后端保持原配置。新增受限 Function 构造器回归用例，修复前复现 `factory is not a function`，修复后导入、校验和新对话均通过，且动态构造次数为零。
+
+移除 `app.json` 中的微信 `style: v2`，避免平台按钮预设覆盖项目自定义宽度与字重。欢迎卡片明确占满容器，正文使用可收缩的 flex 列，输入框图标保持 30px、JD 按钮按内容宽度显示。错误详情独立滚动，关闭按钮始终可见。95 项单元测试通过；390px 浏览器近似布局验证通过，不能代替微信真机验收。

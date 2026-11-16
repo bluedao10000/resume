@@ -13,7 +13,10 @@ const code = buildSync({
   write: false,
   define: { __MINI_API_BASE__: JSON.stringify('https://example.com') },
 }).outputFiles[0].text
-function client(storage = new Map<string, unknown>()) {
+function client(storage = new Map<string, unknown>(), restricted = false) {
+  const dynamicFunction = vi.fn(function () {
+    return Object.create(null)
+  })
   let page: any
   const wx = {
     getStorageSync: (key: string) => storage.get(key) ?? '',
@@ -32,9 +35,10 @@ function client(storage = new Map<string, unknown>()) {
     setTimeout,
     clearTimeout,
     console,
+    ...(restricted ? { Function: dynamicFunction } : {}),
   })
   page.setData = (patch: object) => Object.assign(page.data, patch)
-  return { page, wx, storage }
+  return { page, wx, storage, dynamicFunction }
 }
 it('runs the built native bundle without browser globals, preserves deletion and restores pending state', async () => {
   const { page, storage } = client()
@@ -129,4 +133,19 @@ it('applies layout preferences in place and preserves them on reselecting the sa
   expect(page.data.presentation.density).toBe('compact')
   page.chooseTemplate({ currentTarget: { dataset: { index: 0 } } })
   expect(page.data.presentation.density).toBe('compact')
+})
+
+it('runs parsing, rendering and edits when the native sandbox cannot construct functions', async () => {
+  const { page, dynamicFunction } = client(new Map(), true)
+  page.demo()
+  expect(page.data.error).toBe('')
+  expect(page.data.resumes).toHaveLength(1)
+  page.data.intent = 'import'
+  page.data.input = '测试人物\n开发者\n熟悉 React'
+  await page.send()
+  expect(page.data.error).toBe('')
+  expect(page.data.selected.name).toBe('测试人物')
+  page.newChat()
+  expect(page.data.error).toBe('')
+  expect(dynamicFunction).not.toHaveBeenCalled()
 })
