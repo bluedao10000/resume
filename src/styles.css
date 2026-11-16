@@ -2684,3 +2684,155 @@ summary {
   min-height: 44px;
   border-color: #e5e7eb;
 }
+
+.billing-plan-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.billing-plans-cn {
+  gap: 12px;
+}
+
+.billing-plans-cn .billing-plan {
+  border-radius: 14px;
+  padding: 16px;
+  gap: 8px;
+  min-width: 0;
+}
+
+.billing-plans-cn .billing-plan[data-plan='free'] {
+  background: #f8f9fa;
+}
+
+.billing-plans-cn .billing-plan[data-plan='plus'],
+.billing-plans-cn .billing-plan[data-plan='pro'] {
+  border-color: #d5dfef;
+  background: linear-gradient(180deg, #f4f8ff 0%, #fff 80%);
+}
+
+.billing-plans-cn .billing-plan.current {
+  border-color: #7d8795;
+}
+
+.billing-plans-cn .billing-plan h3 {
+  font-size: 15px;
+}
+
+.billing-plans-cn .billing-price {
+  margin-top: 4px;
+  font-size: clamp(27px, 5vw, 34px);
+  font-variant-numeric: tabular-nums;
+  color: #15223a;
+}
+
+.billing-plans-cn .billing-price span {
+  white-space: nowrap;
+}
+
+.billing-plans-cn .billing-plan > p:not(.billing-price) {
+  color: #41516a;
+  font-size: 12px;
+}
+
+.billing-plans-cn .billing-plan-actions {
+  padding-top: 10px;
+}
+
+.billing-plans-cn .billing-button,
+.billing-order-actions .billing-button {
+  min-height: 42px;
+  border-radius: 8px;
+  padding-inline: 12px;
+  font-weight: 600;
+}
+
+.billing-button.billing-alipay-button {
+  background: #1759c4;
+  border-color: #1759c4;
+  color: #fff;
+}
+
+.billing-button.billing-alipay-button:hover:not(:disabled) {
+  background: #124aa7;
+}
+
+.billing-button.billing-alipay-button:disabled {
+  background: #e9eef7;
+  border-color: #d5dfef;
+  color: #4d607c;
+}
+
+.billing-alipay-order {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #c9dbf5;
+  border-radius: 12px;
+  background: #f4f8ff;
+  color: #172941;
+}
+
+.billing-alipay-order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 12px;
+}
+
+.billing-alipay-order-header h3,
+.billing-alipay-order-header p,
+.billing-order-details p,
+.billing-purchase-note {
+  margin: 0;
+}
+
+.billing-alipay-order-header h3 {
+  font-size: 15px;
+}
+
+.billing-alipay-order-header p,
+.billing-order-details,
+.billing-purchase-note {
+  color: #41516a;
+  font-size: 12px;
+}
+
+.billing-alipay-order-header strong {
+  font-size: 21px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-order-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.billing-order-details summary {
+  cursor: pointer;
+}
+
+.billing-order-details code {
+  overflow-wrap: anywhere;
+}
+
+.billing-details > .billing-alipay-order {
+  margin-top: 10px;
+}
+
+@media (max-width: 480px) {
+  .billing-plan > .billing-plan-actions {
+    grid-column: 1 / -1;
+  }
+
+  .billing-plans-cn .billing-plan-actions {
+    padding-top: 4px;
+  }
+
+  .billing-order-actions > .billing-button {
+    flex: 1 1 auto;
+  }
+}

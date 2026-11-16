@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { z } from 'zod'
 import { formatCredits as credits } from '../lib/billing-format'
-import { AlipayPurchase } from './AlipayPurchase'
+import { AlipayOrderStatus, useAlipayPurchase } from './AlipayPurchase'
 import { BillingSummarySchema, type BillingSummary } from '../domain/billing'
 
 const publicPlans = z.array(
@@ -80,6 +80,9 @@ export function BillingPanel({
     void load(controller.signal)
     return () => controller.abort()
   }, [load])
+  const showAlipay = china && signedIn && !!summary?.alipayConfigured
+  const alipay = useAlipayPurchase(showAlipay, () => void load())
+  const alipayPending = alipay.order?.status === 'pending'
   async function action(path: string, plan?: string, method = 'POST') {
     setOrderNotice('')
     setPending(plan ?? path)
@@ -226,18 +229,27 @@ export function BillingPanel({
           ) : null}
         </section>
       ) : null}
-      {china && signedIn && summary?.alipayConfigured && (
-        <AlipayPurchase
-          plans={catalog}
-          canBuy={summary.plan === 'free' && !order}
-          onUpdate={() => void load()}
+      {showAlipay && alipayPending && alipay.order && (
+        <AlipayOrderStatus
+          order={alipay.order}
+          busy={alipay.busy}
+          submit={alipay.submit}
         />
       )}
-      <div className="billing-plans">
+      {showAlipay && alipay.loadError && (
+        <div className="billing-error" role="alert">
+          无法读取支付宝订单。
+          <button type="button" onClick={alipay.retry}>
+            重新读取
+          </button>
+        </div>
+      )}
+      <div className={`billing-plans${china ? ' billing-plans-cn' : ''}`}>
         {catalog.map((plan) => (
           <section
             key={plan.id}
             className={`billing-plan ${summary?.plan === plan.id ? 'current' : ''}`}
+            data-plan={plan.id}
             aria-label={`${plan.name} 套餐`}
           >
             <h3>{plan.name}</h3>
@@ -247,61 +259,92 @@ export function BillingPanel({
               <span>{china && plan.id !== 'free' ? '/30 天' : '/月'}</span>
             </p>
             <p>
-              {plan.credits} credits{' '}
-              {china && plan.id !== 'free' ? '/ 30 天' : '/ 月'}
+              {plan.credits} {china ? 'AI 额度' : 'credits / 月'}
             </p>
-            {china &&
-            summary?.plan !== 'free' &&
-            summary &&
-            plan.id !== 'free' ? (
-              <span className="billing-current">
-                {summary.plan === plan.id ? '当前套餐' : '到期后可购买'}
-              </span>
-            ) : summary?.plan === plan.id ? (
+            {summary?.plan === plan.id ? (
               <span className="billing-current">当前套餐</span>
             ) : plan.id === 'free' ? (
               <span className="billing-current">免费使用</span>
-            ) : !china ||
-              !summary?.alipayConfigured ||
-              summary.paymentConfigured ? (
-              <button
-                type="button"
-                className="billing-button"
-                disabled={
-                  !!pending ||
-                  (!!summary && !summary.paymentConfigured) ||
-                  (china && !!order)
-                }
-                onClick={() =>
-                  !signedIn
-                    ? onLogin()
-                    : void action(
-                        summary?.canManage && summary.plan !== 'free'
-                          ? '/api/billing/portal'
-                          : '/api/billing/checkout',
-                        summary?.plan !== 'free' ? undefined : plan.id,
-                      )
-                }
-              >
-                {pending === plan.id
-                  ? '正在处理…'
-                  : !signedIn
-                    ? '登录后选择'
-                    : summary?.plan !== 'free'
-                      ? '管理订阅'
-                      : china
-                        ? `微信支付购买 ${plan.name}`
-                        : `升级到 ${plan.name}`}
-              </button>
-            ) : null}
+            ) : china && summary?.plan !== 'free' && summary ? (
+              <span className="billing-current">到期后可购买</span>
+            ) : (
+              <div className="billing-plan-actions">
+                {showAlipay && !alipayPending && (
+                  <button
+                    type="button"
+                    className="billing-button billing-alipay-button"
+                    disabled={
+                      !alipay.ready || !!alipay.busy || !!pending || !!order
+                    }
+                    onClick={() =>
+                      void alipay.submit(plan.id === 'plus' ? 'plus' : 'pro')
+                    }
+                  >
+                    {alipay.busy === plan.id ? '正在打开支付宝…' : '支付宝购买'}
+                  </button>
+                )}
+                {(!showAlipay || summary?.paymentConfigured) && (
+                  <button
+                    type="button"
+                    className="billing-button"
+                    disabled={
+                      !!pending ||
+                      (!!summary && !summary.paymentConfigured) ||
+                      (china && (!!order || alipayPending || !!alipay.busy))
+                    }
+                    onClick={() =>
+                      !signedIn
+                        ? onLogin()
+                        : void action(
+                            summary?.canManage && summary.plan !== 'free'
+                              ? '/api/billing/portal'
+                              : '/api/billing/checkout',
+                            summary?.plan !== 'free' ? undefined : plan.id,
+                          )
+                    }
+                  >
+                    {pending === plan.id
+                      ? '正在处理…'
+                      : !signedIn
+                        ? '登录后选择'
+                        : summary?.plan !== 'free'
+                          ? '管理订阅'
+                          : china
+                            ? `微信支付购买 ${plan.name}`
+                            : `升级到 ${plan.name}`}
+                  </button>
+                )}
+              </div>
+            )}
           </section>
         ))}
       </div>
-      {china ? (
-        <p className="field-hint">
-          付费套餐一次购买，有效期 30 天，到期回到 Free。
+      {china && (
+        <p className="billing-purchase-note">
+          一次付款，30 天后回到 Free。
+          {showAlipay && ' 将跳转到支付宝收银台。'}
         </p>
-      ) : null}
+      )}
+      {showAlipay && alipay.error && (
+        <p className="billing-error" role="alert">
+          {alipay.error}
+        </p>
+      )}
+      {showAlipay && alipay.notice && (
+        <p className="billing-purchase-note" role="status">
+          {alipay.notice}
+        </p>
+      )}
+      {showAlipay && !alipayPending && alipay.order && (
+        <details className="billing-details">
+          <summary>最近一笔支付宝订单</summary>
+          <AlipayOrderStatus
+            order={alipay.order}
+            busy={alipay.busy}
+            submit={alipay.submit}
+          />
+        </details>
+      )}
       {summary && !summary.paymentConfigured && !summary.alipayConfigured ? (
         <p className="field-hint">在线支付尚未开通。</p>
       ) : null}

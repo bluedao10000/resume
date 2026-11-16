@@ -228,3 +228,86 @@ test('国内套餐显示人民币，扫码订单可恢复，查单后刷新权�
     0,
   )
 })
+
+test('支付宝入口位于套餐卡，恢复订单按原价展示并在确认到账后刷新用量', async ({
+  page,
+}, testInfo) => {
+  const cnPlans = catalog.map((plan, i) => ({
+    ...plan,
+    monthlyCents: [0, 2000, 9900][i],
+  }))
+  const pending = {
+    id: '89a7ea48a507467eb88fe0725df75715',
+    plan: 'plus',
+    totalFen: 1800,
+    expiresAt: Date.now() + 15 * 60000,
+    status: 'pending',
+  }
+  let order: typeof pending | null = null
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      json: { mode: 'live', market: 'cn', authConfigured: true },
+    }),
+  )
+  await page.route('**/api/billing/', (route) =>
+    route.fulfill({
+      json: {
+        ...summary,
+        reserved: 0,
+        plans: cnPlans,
+        alipayConfigured: true,
+        plan: order?.status === 'paid' ? 'plus' : 'free',
+      },
+    }),
+  )
+  await page.route('**/api/billing/checkout', (route) =>
+    route.fulfill({ json: { order: null } }),
+  )
+  await page.route('**/api/billing/alipay/', (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON()
+      if (body.check) order = { ...pending, status: 'paid' }
+      else {
+        expect(body).toEqual({ plan: 'plus' })
+        return route.fulfill({
+          status: 503,
+          json: { error: '请重试这笔订单。' },
+        })
+      }
+    }
+    return route.fulfill({ json: { enabled: true, order } })
+  })
+
+  await page.goto('/?billing=return')
+  const panel = page.getByRole('dialog', { name: '套餐与用量' })
+  const plus = panel.getByRole('region', { name: 'Plus 套餐' })
+  const pro = panel.getByRole('region', { name: 'Pro 套餐' })
+  await expect(plus).toContainText('¥20')
+  await expect(pro).toContainText('625 AI 额度')
+  await expect(pro.getByRole('button', { name: '支付宝购买' })).toBeEnabled()
+  await panel.screenshot({ path: testInfo.outputPath('purchase-desktop.png') })
+  await plus.getByRole('button', { name: '支付宝购买' }).click()
+  await expect(panel.getByRole('alert')).toContainText('请重试这笔订单。')
+
+  order = pending
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+  const status = panel.getByRole('region', { name: '支付宝订单' })
+  await expect(status).toContainText('¥18.00')
+  await expect(
+    status.getByRole('button', { name: '继续支付宝付款' }),
+  ).toBeVisible()
+  await expect(plus.getByRole('button', { name: '支付宝购买' })).toHaveCount(0)
+  await expect(pro.getByRole('button', { name: '支付宝购买' })).toHaveCount(0)
+  await expect(panel).not.toHaveCSS('overflow-x', 'scroll')
+  expect(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
+    true,
+  )
+  await panel.screenshot({
+    path: testInfo.outputPath('purchase-pending-mobile.png'),
+  })
+  await status.getByRole('button', { name: '查询支付结果' }).click()
+  await expect(plus).toContainText('当前套餐')
+  await expect(panel.getByRole('status')).toContainText('支付宝已确认付款')
+  await expect(panel.getByText('最近一笔支付宝订单')).toBeVisible()
+})

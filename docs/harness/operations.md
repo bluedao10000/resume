@@ -258,6 +258,8 @@ npm run deploy
 
 ## 支付宝 Vibe Pay 网页收款
 
+套餐卡内可直接发起支付宝付款。返回套餐面板时，待付款订单优先展示原订单金额和查单入口。
+
 ### 本地沙箱
 
 1. 使用官方 `npx -y @alipay/alipay-aipay@latest install` 安装并加载 Skill，按其网页收款流程创建或复核仓库根目录的 `.alipay-sandbox.json`。这是仅本机使用的敏感文件，已经加入 Git 忽略。

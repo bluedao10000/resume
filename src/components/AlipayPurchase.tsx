@@ -20,41 +20,48 @@ const statusSchema = z.object({
     .nullable(),
 })
 
-export function AlipayPurchase({
-  plans,
-  canBuy,
-  onUpdate,
-}: {
-  plans: { id: string; name: string; monthlyCents: number; credits: number }[]
-  canBuy: boolean
-  onUpdate: () => void
-}) {
+type AlipayOrder = NonNullable<z.infer<typeof statusSchema>['order']>
+type AlipayAction = 'plus' | 'pro' | 'check'
+
+export function useAlipayPurchase(enabled: boolean, onUpdate: () => void) {
   const [status, setStatus] = useState<z.infer<typeof statusSchema>>()
-  const [busy, setBusy] = useState(false)
+  const [busy, setBusy] = useState<AlipayAction | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const [notice, setNotice] = useState('')
+  const [error, setError] = useState('')
+  const [attempt, setAttempt] = useState(0)
   useEffect(() => {
+    if (!enabled) return
     const controller = new AbortController()
     fetch('/api/billing/alipay/', { signal: controller.signal })
       .then(async (response) => {
-        if (response.ok) setStatus(statusSchema.parse(await response.json()))
+        if (!response.ok) throw new Error('status')
+        const result = statusSchema.parse(await response.json())
+        if (!result.enabled) throw new Error('disabled')
+        if (!controller.signal.aborted) setStatus(result)
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!controller.signal.aborted) setLoadError(true)
+      })
     return () => controller.abort()
-  }, [])
+  }, [enabled, attempt])
 
-  async function submit(plan?: string) {
-    setBusy(true)
+  async function submit(action: AlipayAction) {
+    setBusy(action)
     setNotice('')
+    setError('')
     try {
       const response = await fetch('/api/billing/alipay/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(plan ? { plan } : { check: true }),
+        body: JSON.stringify(
+          action === 'check' ? { check: true } : { plan: action },
+        ),
       })
       const result = await response.json()
       if (!response.ok)
         throw new Error(z.object({ error: z.string() }).parse(result).error)
-      if (plan) {
+      if (action !== 'check') {
         const { paymentHtml } = z
           .object({ paymentHtml: z.string() })
           .parse(result)
@@ -65,50 +72,103 @@ export function AlipayPurchase({
       setStatus(value)
       onUpdate()
       setNotice(
-        value.order?.status === 'paid' ? '付款已确认。' : '尚无新付款确认。',
+        value.order?.status === 'paid'
+          ? '支付宝已确认付款。'
+          : value.order?.status === 'pending'
+            ? '支付宝尚未确认到账。若已付款，请稍后再查。'
+            : '订单状态已更新。',
       )
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : '暂时无法连接支付宝。')
+    } catch (cause) {
+      setError(
+        cause instanceof z.ZodError
+          ? '暂时无法读取支付宝响应，请重试。'
+          : cause instanceof Error
+            ? cause.message
+            : '暂时无法连接支付宝。',
+      )
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
 
-  if (!status?.enabled) return null
-  const pending = status.order?.status === 'pending' ? status.order : null
+  return {
+    ready: !!status?.enabled,
+    order: status?.order ?? null,
+    busy,
+    notice,
+    error,
+    loadError,
+    submit,
+    retry: () => {
+      setLoadError(false)
+      setAttempt((value) => value + 1)
+    },
+  }
+}
+
+const orderStatus = {
+  pending: '待付款',
+  closed: '已关闭',
+  paid: '已付款',
+  refund_pending: '退款处理中',
+  refunded: '已退款',
+}
+
+export function AlipayOrderStatus({
+  order,
+  busy,
+  submit,
+}: {
+  order: AlipayOrder
+  busy: AlipayAction | null
+  submit: (action: AlipayAction) => Promise<void>
+}) {
+  const pending = order.status === 'pending'
+  const expired = pending && order.expiresAt <= Date.now()
+  const plan = order.plan === 'plus' ? 'Plus' : 'Pro'
   return (
-    <section aria-label="支付宝购买">
-      <h3>支付宝购买 AI 额度包</h3>
-      <p>一次付款，额度有效期 30 天。</p>
-      <div className="landing-actions">
-        {canBuy &&
-          plans
-            .filter((item) => item.id !== 'free')
-            .filter((item) => !pending || item.id === pending.plan)
-            .map((item) => (
-              <button
-                className="outline-button"
-                key={item.id}
-                disabled={
-                  busy || Boolean(pending && pending.expiresAt <= Date.now())
-                }
-                onClick={() => void submit(item.id)}
-              >
-                {pending ? '继续支付' : '购买'} {item.name} · ¥
-                {((pending?.totalFen ?? item.monthlyCents) / 100).toFixed(2)} ·{' '}
-                {item.credits} 额度
-              </button>
-            ))}
+    <section className="billing-alipay-order" aria-label="支付宝订单">
+      <div className="billing-alipay-order-header">
+        <div>
+          <h3>{expired ? '订单已过支付期限' : orderStatus[order.status]}</h3>
+          <p>{plan} · 支付宝</p>
+        </div>
+        <strong>¥{(order.totalFen / 100).toFixed(2)}</strong>
+      </div>
+      <div className="billing-order-actions">
+        {pending && !expired && (
+          <button
+            type="button"
+            className="billing-button billing-alipay-button"
+            disabled={!!busy}
+            onClick={() => void submit(order.plan)}
+          >
+            {busy === order.plan ? '正在打开支付宝…' : '继续支付宝付款'}
+          </button>
+        )}
         <button
-          className="outline-button"
-          disabled={busy}
-          onClick={() => void submit()}
+          type="button"
+          className="billing-button"
+          disabled={!!busy}
+          onClick={() => void submit('check')}
         >
-          查询支付宝订单
+          {busy === 'check' ? '正在查询…' : '查询支付结果'}
         </button>
       </div>
-      {status.order && <p className="field-hint">订单号 {status.order.id}</p>}
-      {notice && <p role="status">{notice}</p>}
+      <details className="billing-order-details">
+        <summary>订单详情</summary>
+        <p>
+          订单号 <code>{order.id}</code>
+        </p>
+        {pending && (
+          <p>
+            支付截止{' '}
+            {new Date(order.expiresAt).toLocaleString('zh-CN', {
+              timeZone: 'Asia/Shanghai',
+            })}
+          </p>
+        )}
+      </details>
     </section>
   )
 }
