@@ -1,0 +1,91 @@
+<wxs module="format">module.exports.join = function(items, separator) { return items.join(separator); }; module.exports.joinLines = function(items) { return items.join('\n'); };</wxs>
+<template name="resume">          <view class="document resume-paper {{selected.template}} {{presentation.density}}" data-summary="{{presentation.summary}}" data-skills="{{presentation.skills}}" data-experience="{{presentation.experience}}" data-density="{{presentation.density}}">
+            <text wx:if="{{selected.isExample}}" class="resume-example-note">示例简历 · 虚构内容，仅供体验</text>
+            <view class="resume-heading"><view><text class="resume-name">{{selected.name}}</text><text class="resume-title">{{selected.title}}</text></view><text class="resume-monogram">{{selected.name[0]}}</text></view><text class="resume-contact">{{selected.location}}{{selected.location && selected.email ? "　/　" : ""}}{{selected.email}}</text>
+            <view wx:for="{{sections}}" wx:key="id" wx:if="{{item.text || item.skills.length || item.entries.length}}" class="resume-section">
+              <view class="section-title">{{item.name}}<text class="section-english">{{item.id === "summary" ? "PROFILE" : item.id === "experience" ? "EXPERIENCE" : item.id === "skills" ? "EXPERTISE" : "EDUCATION"}}</text></view>
+              <rich-text wx:if="{{item.text}}" user-select nodes="{{item.nodes}}" class="resume-body {{item.id === 'summary' ? 'resume-summary' : ''}}"/>
+              <view wx:if="{{item.skills.length}}" class="resume-skills"><view class="resume-skill" wx:for="{{item.skills}}" wx:key="index"><rich-text nodes="{{item}}"/></view></view>
+              <view wx:for="{{item.entries}}" wx:for-item="entry" wx:key="index" class="resume-job"><view class="job-heading"><text class="company">{{entry.company}}</text><text class="period">{{entry.period}}</text></view><text class="job-role">{{entry.role}}</text><view class="resume-bullets"><view wx:for="{{entry.bullets}}" wx:key="index" class="resume-bullet"><text class="bullet-dot">•</text><rich-text user-select nodes="{{item}}"/></view></view></view>
+            </view>
+          </view></template>
+<view class="app">
+  <scroll-view wx:if="{{!entered}}" scroll-y class="landing-scroll"><view class="landing">
+    <view class="landing-header"><text class="brand">folio</text><text class="muted">简历定制</text></view>
+    <view class="landing-intro"><text class="headline">按岗位 JD 定制简历</text>
+    <text class="landing-description">导入已有简历，粘贴岗位描述。用真实经历生成独立的投递版本，在对话中修改，随时核对简历预览。</text>
+    <view class="landing-actions"><button class="primary" wx:if="{{config.loginEnabled}}" loading="{{busy}}" disabled="{{busy}}" bindtap="login">开始定制简历 →</button><button bindtap="demo" disabled="{{busy}}">试用示例</button></view>
+    <text wx:if="{{config && !config.loginEnabled}}" class="landing-note">微信登录尚未开通，可先试用示例。</text>
+    <text class="landing-note">示例使用本机规则，非实时 AI 生成。</text>
+    <text wx:if="{{loading}}" class="landing-note">正在连接服务…</text><button wx:if="{{!config && !loading}}" bindtap="retryConfig">重新连接</button></view>
+    <view class="landing-product"><view class="landing-product-bar"><text class="landing-product-title">从岗位要求，到经历选材</text><text class="muted">虚构案例 · 非实时生成</text></view><view class="landing-conversation"><text class="context-label">原简历</text><text>平台项目在前，设计系统经历在后。</text><text class="context-label">目标岗位要求</text><text>设计系统、跨团队协作与无障碍设计。</text><view class="landing-request">针对这个岗位，把设计系统要点放在这份工作经历的第一条。</view><text class="reply-title">定制后的重点</text><text>优先呈现已有的设计系统经历，保留原始事实。</text><text class="missing-note">待补充：无障碍设计的实际经验，不能代为编造。</text><view class="landing-version">设计系统 · 独立投递版本，原稿保留</view></view></view>
+    <view class="landing-section"><text class="title">从已有简历，到下一次投递</text><view class="landing-step"><text class="step-number">01</text><view><text class="step-title">导入已有简历</text><text class="muted">粘贴真实经历，核对原文后开始整理。</text></view></view><view class="landing-step"><text class="step-number">02</text><view><text class="step-title">按岗位定制</text><text class="muted">粘贴 JD，生成独立版本并保留原稿。</text></view></view><view class="landing-step"><text class="step-number">03</text><view><text class="step-title">核对与保存</text><text class="muted">对照预览检查事实，导出 JSON 备份。</text></view></view></view>
+    <view class="landing-section"><text class="title">开始前，了解数据保存</text><text class="muted">简历与完整对话保存在当前设备，不跨设备同步。真实 AI 请求会将必要内容发送到服务端与模型服务；本机删除不会同时删除服务端执行记录。小程序暂不支持 PDF 导出。</text></view><view class="landing-footer">folio</view>
+  </view></scroll-view>
+  <view wx:else class="workspace">
+    <view class="rail">
+      <button class="rail-brand" aria-label="打开导航" bindtap="openDrawer">f</button>
+      <button class="new-conversation" aria-label="新对话" bindtap="newChat" disabled="{{pending}}"><image src="/assets/plus.svg"/></button>
+      <view class="rail-nav"><button aria-label="对话" data-tab="chat" bindtap="navigate" class="{{tab === 'chat' ? 'active' : ''}}"><image src="/assets/chat.svg"/></button>
+      <button aria-label="简历预览" data-tab="preview" bindtap="navigate" class="{{tab === 'preview' ? 'active' : ''}}"><image src="/assets/preview.svg"/></button>
+      <button aria-label="简历库" data-tab="library" bindtap="navigate" class="{{tab === 'library' ? 'active' : ''}}"><image src="/assets/library.svg"/></button>
+      <button aria-label="模板与排版" data-tab="templates" bindtap="navigate" class="{{tab === 'templates' ? 'active' : ''}}"><image src="/assets/settings.svg"/></button><button aria-label="历史对话" bindtap="history" disabled="{{pending}}"><image src="/assets/history.svg"/></button></view>
+      <view class="rail-space"/><text wx:if="{{demo}}" class="demo-label">演示模式</text>
+      <button aria-label="账户" data-tab="account" bindtap="navigate" class="{{tab === 'account' ? 'active' : ''}}"><image src="/assets/account.svg"/></button>
+    </view>
+    <view class="main"><view wx:if="{{toolsOpen}}" class="tools-backdrop" bindtap="toggleTools"/>
+      <view wx:if="{{tab === 'chat'}}" class="conversation">
+        <scroll-view scroll-y class="messages" scroll-into-view="{{scrollTarget}}">
+<view wx:if="{{!messages.length}}" class="welcome-container"><view class="chat-welcome"><view class="chat-welcome-heading"><text class="welcome-mark">f.</text><text class="welcome-heading">从这里开始</text></view><view class="welcome-actions"><button class="welcome-action" data-intent="import" bindtap="chooseIntent" disabled="{{pending}}"><view class="welcome-art "><view class="welcome-sheet sheet-back"/><view class="welcome-sheet"><view/><view/><view/><view/></view><text class="welcome-file">TXT / JSON</text></view><view class="welcome-copy"><text class="welcome-title">{{selected && !selected.isExample ? '导入另一份简历' : '导入已有简历'}}</text><text class="welcome-description">粘贴经历或导入备份，整理成可编辑的简历</text></view><image class="welcome-arrow" src="/assets/arrow.svg"/></button><button class="welcome-action" data-intent="polish" bindtap="chooseIntent" disabled="{{pending || !selected}}"><view class="welcome-art "><text class="welcome-bubble">精简个人简介</text><view class="welcome-edit-lines"><view/><view/><view/></view></view><view class="welcome-copy"><text class="welcome-title">用对话修改简历</text><text class="welcome-description">润色表达、调整顺序，修改直接呈现在预览中</text></view><image class="welcome-arrow" src="/assets/arrow.svg"/></button><button class="welcome-action" data-intent="tailor" bindtap="chooseIntent" disabled="{{pending || !selected}}"><view class="welcome-art welcome-art-jd"><view class="welcome-job">JD<view/><view/></view><text class="welcome-match">→</text><view class="welcome-sheet"><view/><view/><view/><view/></view></view><view class="welcome-copy"><text class="welcome-title">按 JD 定制投递版本</text><text class="welcome-description">粘贴岗位要求，生成独立版本并保留原简历</text></view><image class="welcome-arrow" src="/assets/arrow.svg"/></button></view></view></view>
+          <view wx:for="{{messages}}" wx:key="index" id="message-{{index}}" class="message {{item.role}}">
+            <text wx:if="{{item.role === 'assistant'}}" class="agent-avatar">f.</text><view class="message-body"><text wx:if="{{item.role === 'assistant'}}" class="role">Folio</text><text selectable class="message-text">{{item.content}}</text>
+            <view wx:if="{{item.missing.length}}" class="missing"><text>待补充事实</text><text wx:for="{{item.missing}}" wx:key="*this">• {{item}}</text></view></view>
+          </view>
+          <view wx:if="{{pending}}" class="pending"><text>任务尚未结束</text><button size="mini" loading="{{busy}}" disabled="{{busy}}" bindtap="resume">恢复任务</button><button size="mini" disabled="{{busy}}" bindtap="cancel">停止</button></view>
+          <view class="bottom-space"/>
+        </scroll-view>
+        <view class="composer-container {{toolsOpen ? 'tools-open' : ''}}"><view class="composer">
+          <textarea aria-label="输入简历或修改要求" value="{{input}}" bindinput="input" bindblur="blurComposer" focus="{{composerFocus}}" maxlength="20000" placeholder="{{intent === 'import' ? '粘贴简历，核对真实经历后发送…' : intent === 'tailor' ? '粘贴岗位描述（JD），生成独立版本…' : '描述修改要求，或粘贴岗位描述（JD）…'}}" placeholder-class="composer-placeholder" disabled="{{pending}}" cursor-spacing="20"/>
+          <view class="composer-bottom"><view class="composer-source"><button class="icon-button" aria-label="简历操作" bindtap="toggleTools" disabled="{{pending}}"><image src="/assets/plus.svg"/></button><text class="source">{{intent === 'import' ? '导入简历' : selected ? selected.name + ' · ' + selected.label : '尚未选择简历'}}</text></view><view class="composer-send"><button wx:if="{{selected}}" class="composer-jd" data-intent="tailor" bindtap="chooseIntent" disabled="{{pending}}">按 JD 定制</button><button class="send-button" aria-label="发送" bindtap="send" loading="{{busy}}" disabled="{{!input || pending || busy}}"><image wx:if="{{!busy}}" src="/assets/send.svg"/></button></view></view>
+          <view wx:if="{{toolsOpen}}" class="composer-menu"><button data-intent="import" bindtap="chooseIntent">导入简历</button><button data-intent="polish" bindtap="chooseIntent" disabled="{{!selected}}">润色简历</button><button data-intent="tailor" bindtap="chooseIntent" disabled="{{!selected}}">按岗位定制</button><button bindtap="importJson">导入 JSON 备份</button></view>
+        </view></view>
+      </view>
+      <scroll-view wx:elif="{{tab === 'preview'}}" scroll-y class="panel preview-panel">
+        <view wx:if="{{selected}}" class="panel-body preview-body">
+          <view class="preview-toolbar"><image src="/assets/preview.svg"/><text class="preview-label">{{selected.label}}</text><button class="icon-button" aria-label="删除简历" data-id="{{selected.id}}" bindtap="remove" disabled="{{pending}}"><image src="/assets/trash.svg"/></button><button class="icon-button" aria-label="导出 JSON 备份" bindtap="exportJson"><image src="/assets/download.svg"/></button></view><view class="preview-options"><view class="segmented"><button class="active">预览</button><button bindtap="edit" disabled="{{pending}}">编辑内容</button></view><button class="template-choice" data-tab="templates" bindtap="navigate">{{templates[templateIndex].name}} ﹀</button></view>
+          <template is="resume" data="{{selected, sections, presentation}}"/>
+        </view>
+        <view wx:else class="empty"><text>简历库为空。请在对话中导入真实经历。</text></view>
+      </scroll-view>
+      <scroll-view wx:elif="{{tab === 'library'}}" scroll-y class="panel"><view class="panel-body">
+        <text class="title">简历库</text><button wx:if="{{canUndo}}" bindtap="undo">撤销最近一次删除</button>
+        <view wx:for="{{resumeCards}}" wx:key="id" class="card"><button class="thumbnail-button" aria-label="预览 {{item.selected.label}}" data-id="{{item.selected.id}}" bindtap="select" disabled="{{pending}}"><view class="mini-preview" aria-hidden="true"><template is="resume" data="{{selected:item.selected, sections:item.sections, presentation:item.presentation}}"/></view></button><view class="card-info"><button class="resume-select" data-id="{{item.selected.id}}" bindtap="select" disabled="{{pending}}">{{item.selected.label}}<text class="muted">{{item.selected.updatedAt}}{{item.selected.isExample ? ' · 示例' : ''}}</text></button><button size="mini" data-id="{{item.selected.id}}" bindtap="remove" disabled="{{pending}}">删除</button></view></view>
+        <text wx:if="{{!resumes.length}}" class="muted">没有保存的简历。删除后不会重新加入示例。</text>
+      </view></scroll-view>
+      <scroll-view wx:elif="{{tab === 'templates'}}" scroll-y class="panel"><view class="panel-body"><text class="title">模板与排版</text><view wx:if="{{selected}}" class="layout-controls"><view class="layout-fields"><view wx:for="{{layoutFields}}" wx:key="key" class="layout-field"><text>{{item.label}}</text><picker range="{{item.labels}}" value="{{layoutIndices[index]}}" data-index="{{index}}" bindchange="layout" disabled="{{pending}}"><view class="layout-select">{{item.labels[layoutIndices[index]]}} ▾</view></picker></view></view><button data-tab="preview" bindtap="navigate">查看简历</button></view><view wx:for="{{templateCards}}" wx:key="index" class="template-card {{selected.template === item.selected.template ? 'chosen' : ''}}"><button class="thumbnail-button" aria-label="选择 {{item.name}}" data-index="{{index}}" bindtap="chooseTemplate" disabled="{{pending}}"><view class="mini-preview" aria-hidden="true"><template is="resume" data="{{selected:item.selected, sections:item.sections, presentation:item.presentation}}"/></view></button><view class="card-info"><text>{{item.name}}{{selected.template === item.selected.template ? ' · 当前模板' : ''}}</text><text class="muted">{{item.description}}</text></view></view><text wx:if="{{!selected}}" class="muted">请先导入一份简历。</text></view></scroll-view>
+      <scroll-view wx:else scroll-y class="panel"><view class="panel-body account">
+        <text class="title">{{demo ? '演示空间' : '微信账户'}}</text>
+        <text>简历和完整对话仅保存在当前设备的小程序存储中，不与网站或其他设备同步。</text>
+        <text>真实 AI 请求会发送必要的简历与上下文到服务端及模型服务；服务端保留执行记录，本机删除不会同时删除这些记录。</text>
+        <button bindtap="exportJson">导出 JSON 备份</button><button bindtap="importJson" disabled="{{pending}}">从聊天文件导入 JSON</button>
+        <text class="muted">首版支持文字导入、文本预览和 JSON 备份。暂不支持 PDF/DOCX 提取、PDF 导出或小程序内购买套餐。支持 Markdown 文字排版；链接仅显示，不直接跳转。</text>
+        <button bindtap="logout" disabled="{{busy}}">{{demo ? '退出演示' : '退出登录'}}</button>
+      </view></scroll-view>
+    </view>
+    <view wx:if="{{drawer}}" class="drawer-backdrop" bindtap="openDrawer"/><view wx:if="{{drawer}}" class="drawer"><text class="title">Folio</text><button bindtap="newChat" disabled="{{pending}}">新对话</button><button bindtap="history" disabled="{{pending}}">历史对话</button><button data-tab="preview" bindtap="navigate">简历预览</button><button data-tab="account" bindtap="navigate">账户与备份</button><button bindtap="openDrawer">关闭导航</button></view>
+  </view>
+  <view wx:if="{{error}}" class="error" aria-role="alert"><text selectable>{{error}}</text><button size="mini" bindtap="dismissError">关闭</button></view>
+  <view wx:if="{{edit}}" class="edit-modal"><scroll-view scroll-y class="editor"><view class="panel-body">
+    <text class="title">编辑简历</text>
+    <label>姓名<input value="{{edit.name}}" data-field="name" bindinput="editField"/></label>
+    <label>职位<input value="{{edit.title}}" data-field="title" bindinput="editField"/></label>
+    <label>邮箱<input value="{{edit.email}}" data-field="email" bindinput="editField"/></label>
+    <label>地点<input value="{{edit.location}}" data-field="location" bindinput="editField"/></label>
+    <label>简介<textarea value="{{edit.summary}}" data-field="summary" bindinput="editField" maxlength="20000"/></label>
+    <label>技能（用顿号分隔）<textarea value="{{format.join(edit.skills, '、')}}" data-field="skills" bindinput="editField" maxlength="2000"/></label>
+    <view wx:for="{{edit.experience}}" wx:key="index"><text class="section-title">工作经历 {{index + 1}}</text><label>公司<input value="{{item.company}}" data-index="{{index}}" data-field="company" bindinput="editExperience"/></label><label>职位<input value="{{item.role}}" data-index="{{index}}" data-field="role" bindinput="editExperience"/></label><label>时间<input value="{{item.period}}" data-index="{{index}}" data-field="period" bindinput="editExperience"/></label><label>工作要点（每行一条）<textarea value="{{format.joinLines(item.bullets)}}" data-index="{{index}}" data-field="bullets" bindinput="editExperience" maxlength="10000"/></label><button size="mini" data-index="{{index}}" bindtap="deleteExperience">删除这段经历</button></view>
+    <button bindtap="addExperience">添加工作经历</button>
+    <label>教育背景<textarea value="{{edit.education}}" data-field="education" bindinput="editField" maxlength="2000"/></label>
+    <view class="actions"><button bindtap="closeEdit">取消</button><button class="primary" bindtap="saveEdit">保存</button></view>
+  </view></scroll-view></view>
+</view>

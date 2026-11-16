@@ -296,3 +296,9 @@ WECHAT_APP_SECRET=在本机填写开放平台生成的AppSecret
 - 在目标环境的 `.env` 配置 `APP_MARKET=cn`、`ALIPAY_MODE=production`、`ALIPAY_APP_ID`、`ALIPAY_PRIVATE_KEY`（原始 PKCS#1）、`ALIPAY_PUBLIC_KEY` 和 `ALIPAY_SELLER_ID`。私钥通过本机密钥管理写入。启用异步通知时配置已部署的 HTTPS `ALIPAY_NOTIFY_URL`。未配置通知时，由 Worker 的定时查单和用户主动查询完成确认。
 - 在确认目标 D1 和 Worker 环境后，应用 `0004_alipay.sql`，再部署。核对通知验签、定时任务、后台重试及交易查询。切换生产应用前先清理旧应用的待支付订单。
 - 可选退款操作员。在 `.env` 设置 `ALIPAY_OPERATOR_USER_ID` 为授权人员的 Better Auth user ID。该账户可在同源会话中向 `POST /api/billing/alipay/refund?order=<商户订单号>` 发起全额退款。查单确认退款后回收剩余套餐权益；相同订单安全重试，不会发起第二笔退款。已消耗的 AI 用量仍保留在账本。
+
+## 微信小程序
+
+在 `.env` 设置独立 `WECHAT_MINI_APP_ID` / `WECHAT_MINI_APP_SECRET`；后者只走服务端 secret 白名单。`npm run build:wechat` 生成开发者工具配置和客户端包。新增 `0006_wechat_mini.sql` 需要在用户指定环境迁移后部署 Worker；本次开发不自动迁移或发布国内正式站。配置 request 合法域名与使用对应 AppID 的微信开发者工具完成登录、后台恢复、文件分享真机联调。详细步骤和未支持能力见[小程序启动与验证](../architecture/wechat-mini.md)。
+
+小程序官方 CI 已提供 `npm run wx:prepare`、`npm run wx:preview` 和 `npm run wx:upload`。上传使用独立的 `WECHAT_CI_PRIVATE_KEY_PATH` 文件凭据，版本与产物哈希记录在 Git 忽略的 `artifacts/wechat/release.json`；只有同一产物预览成功后才上传开发版本，不提审、不发布、不自动部署 Cloudflare 后端。配置和重复运行方法见 [小程序 README](../../wechat-mini/README.md#官方-ci-预览与开发版本上传)。

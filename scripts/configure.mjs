@@ -12,6 +12,7 @@ export const secretKeys = [
   'AUTH_RESEND_API_KEY',
   'ALIPAY_PRIVATE_KEY',
   'WECHAT_APP_SECRET',
+  'WECHAT_MINI_APP_SECRET',
   'WECHAT_PAY_PRIVATE_KEY',
   'WECHAT_PAY_API_V3_KEY',
   'AI_API_KEY',
@@ -62,6 +63,8 @@ const billingSchema = {
   ),
 }
 const wechatSchema = {
+  WECHAT_MINI_APP_ID: z.string().optional(),
+  WECHAT_MINI_APP_SECRET: z.string().optional(),
   WECHAT_APP_ID: z.string().optional(),
   WECHAT_APP_SECRET: z.string().optional(),
   WECHAT_PAY_APP_ID: z.string().optional(),
@@ -213,6 +216,8 @@ export function parseConfiguration(values) {
     throw new Error('GitHub login requires both OAuth credentials.')
   if (!!config.AUTH_EMAIL_FROM !== !!config.AUTH_RESEND_API_KEY)
     throw new Error('Email login requires a sender and a Resend API key.')
+  if (config.WECHAT_MINI_APP_SECRET && !config.WECHAT_MINI_APP_ID)
+    throw new Error('Mini Program login requires both credentials.')
   const wechatLogin =
     config.APP_MARKET === 'cn' &&
     config.WECHAT_APP_ID &&
@@ -222,7 +227,8 @@ export function parseConfiguration(values) {
     config.GOOGLE_CLIENT_ID &&
     config.GOOGLE_CLIENT_SECRET
   if (
-    wechatLogin &&
+    (wechatLogin ||
+      (config.WECHAT_MINI_APP_ID && config.WECHAT_MINI_APP_SECRET)) &&
     config.APP_MODE === 'live' &&
     new URL(config.BETTER_AUTH_URL).protocol !== 'https:'
   )
@@ -233,6 +239,9 @@ export function parseConfiguration(values) {
       !config.AI_MODEL ||
       !(
         wechatLogin ||
+        (config.APP_MARKET === 'cn' &&
+          config.WECHAT_MINI_APP_ID &&
+          config.WECHAT_MINI_APP_SECRET) ||
         googleLogin ||
         config.GITHUB_CLIENT_ID ||
         config.AUTH_EMAIL_FROM

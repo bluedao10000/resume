@@ -1,0 +1,12 @@
+{
+  "pages": ["pages/workspace/index"],
+  "window": {
+    "navigationBarTitleText": "Folio",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#ffffff"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

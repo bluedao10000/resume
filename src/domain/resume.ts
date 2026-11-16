@@ -239,12 +239,13 @@ export function retrieveResume(
 }
 export function demoAgent(
   input: z.input<typeof AgentRequestSchema>,
+  creationId?: string,
 ): AgentResult {
   const source =
     input.intent === 'tailor'
       ? retrieveResume(input.resume, input.library ?? [], input.text)
       : input.resume
-  const resume = structuredClone(source)
+  const resume = ResumeSchema.parse(source)
   const move = input.intent === 'polish' ? parseSectionMove(input.text) : null
   if (move)
     return finalizeAgentResult(
@@ -327,5 +328,6 @@ export function demoAgent(
     },
     input.intent,
     source,
+    creationId,
   )
 }

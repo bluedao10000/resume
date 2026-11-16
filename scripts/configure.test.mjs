@@ -13,6 +13,8 @@ test('generated configuration excludes credentials and declares allowed secrets'
     CLOUDFLARE_API_TOKEN: 'cf-secret-fixture',
     GOOGLE_CLIENT_SECRET: 'google-secret-fixture',
     WECHAT_APP_SECRET: 'wechat-login-secret-fixture',
+    WECHAT_MINI_APP_ID: 'wx-mini-fixture',
+    WECHAT_MINI_APP_SECRET: 'mini-secret-fixture',
     GITHUB_CLIENT_ID: 'github-client-fixture',
     GITHUB_CLIENT_SECRET: 'github-secret-fixture',
     AUTH_RESEND_API_KEY: 'mail-secret-fixture',
@@ -27,6 +29,7 @@ test('generated configuration excludes credentials and declares allowed secrets'
     'BETTER_AUTH_SECRET',
     'GOOGLE_CLIENT_SECRET',
     'WECHAT_APP_SECRET',
+    'WECHAT_MINI_APP_SECRET',
     'GITHUB_CLIENT_SECRET',
     'AUTH_RESEND_API_KEY',
     'CLOUDFLARE_API_TOKEN',
@@ -36,6 +39,8 @@ test('generated configuration excludes credentials and declares allowed secrets'
     assert.ok(!serialized.includes(config[key]))
   assert.ok(worker.secrets.required.includes('AI_API_KEY'))
   assert.ok(worker.secrets.required.includes('WECHAT_APP_SECRET'))
+  assert.ok(worker.secrets.required.includes('WECHAT_MINI_APP_SECRET'))
+  assert.equal(worker.vars.WECHAT_MINI_APP_ID, 'wx-mini-fixture')
   assert.ok(worker.secrets.required.includes('GITHUB_CLIENT_SECRET'))
   assert.ok(worker.secrets.required.includes('AUTH_RESEND_API_KEY'))
   assert.equal(worker.vars.GITHUB_CLIENT_ID, config.GITHUB_CLIENT_ID)

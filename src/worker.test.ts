@@ -5,6 +5,9 @@ vi.mock('@tanstack/react-start/server-entry', () => ({
   default: { fetch: () => new Response('SSR') },
 }))
 vi.mock('./server/resume-session', () => ({ ResumeAgentSession: class {} }))
+vi.mock('./server/wechat-mini', () => ({
+  miniApi: () => Response.json({ mini: true }),
+}))
 vi.mock('./server/alipay-orders', () => ({ reconcilePendingAlipay: vi.fn() }))
 
 const config = {
@@ -40,4 +43,12 @@ it.each([
   })
   expect(response.status).toBe(200)
   expect(response.headers.has('Location')).toBe(false)
+})
+
+it('routes native mini requests before the SSR handler', async () => {
+  const response = await worker.fetch(
+    new Request('https://www.codeiy.com/api/wechat-mini/config'),
+    config,
+  )
+  expect(await response.json()).toEqual({ mini: true })
 })

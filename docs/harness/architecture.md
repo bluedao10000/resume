@@ -116,3 +116,7 @@ Worker 承载 SSR 与 API；Static Assets 提供浏览器 JS/CSS；D1 存认证�
 邮箱验证码和 GitHub 登录沿用同一个 Better Auth 会话。GitHub 的 OAuth 回调由 Better Auth 处理，应用回跳时重新读取会话。邮箱验证码使用现有 D1 verification 表，Worker 通过 Resend 发送登录验证码。
 
 国内登录弹窗使用 Better Auth 现有授权地址生成微信官方嵌入二维码参数，扫码确认由微信跳转到原有回调，工作台只根据有效会话打开。二维码状态只接受对应微信 iframe 的就绪消息。组件超时后可重试，加载失败可打开原授权页。邮箱重发沿用原发码接口。
+
+## 微信小程序
+
+`cn` 分支的 `wechat-mini/` 提供原生 WXML/WXSS 客户端，复用领域模块；原生界面采用一份 workspace/message 状态和一个简历预览模板，网页继续使用 assistant-ui/ResumeDocument。`server/agent-handler.ts` 抽取原 API 行为供网页和小程序共用。Worker 的 `/api/wechat-mini/` 入口验证独立的小程序会话，再传入服务端确定的 userId；不修改现有计费算法。D1 新增小程序 token 摘要会话表，客户端数据仍仅本机保存。完整边界与验证要求见[小程序架构](../architecture/wechat-mini.md)。

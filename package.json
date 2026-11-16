@@ -21,7 +21,13 @@
     "format:check": "prettier --check .",
     "deploy:check": "npm run build && wrangler deploy --dry-run",
     "test:live": "FOLIO_LIVE_VALIDATION=1 vitest run src/server/live-validation.test.ts",
-    "dev:alipay": "node scripts/alipay-sandbox.mjs"
+    "dev:alipay": "node scripts/alipay-sandbox.mjs",
+    "build:wechat": "node scripts/build-wechat.mjs",
+    "check:wechat": "tsc -p wechat-mini/tsconfig.json",
+    "wx:prepare": "npm run check:wechat && npm run build:wechat && node scripts/wechat-ci.mjs prepare",
+    "wx:preview": "node scripts/wechat-ci.mjs preview",
+    "wx:upload": "node scripts/wechat-ci.mjs upload",
+    "wx:release": "npm run wx:prepare && npm run wx:preview && npm run wx:upload"
   },
   "dependencies": {
     "@assistant-ui/react": "0.15.36",
@@ -66,6 +72,9 @@
     "@types/react-dom": "19.3.0",
     "@types/turndown": "5.0.6",
     "@vitejs/plugin-react": "6.3.0",
+    "esbuild": "0.28.2",
+    "miniprogram-api-typings": "5.3.1",
+    "miniprogram-ci": "2.1.31",
     "prettier": "3.10.1",
     "typescript": "7.0.2",
     "vite": "8.3.8",

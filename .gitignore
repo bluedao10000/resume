@@ -16,3 +16,11 @@ playwright-report/
 # Local UX simulation report and raw evidence
 /Folio_User_Experience_Simulation_Report.md
 /docs/research/folio-ux-simulation-evidence/
+/wechat-mini/dist/
+/wechat-mini/project.config.json
+/wechat-mini/project.private.config.json
+/artifacts/wechat/
+/private.*.key
+/private.*.pem
+/wechat-mini/private.*.key
+/wechat-mini/private.*.pem

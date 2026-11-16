@@ -55,6 +55,7 @@
   },
   "keep_vars": false,
   "vars": {
+    "WECHAT_MINI_APP_ID": "wx2edf2f89a21fcff6",
     "WECHAT_APP_ID": "wxe4d137338b962c85",
     "APP_MARKET": "cn",
     "APP_MODE": "live",
@@ -74,6 +75,7 @@
       "AUTH_RESEND_API_KEY",
       "ALIPAY_PRIVATE_KEY",
       "WECHAT_APP_SECRET",
+      "WECHAT_MINI_APP_SECRET",
       "AI_API_KEY"
     ]
   },

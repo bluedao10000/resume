@@ -1,0 +1,123 @@
+/* CN design tokens: src/styles.css. Use CSS px, not viewport-scaled rpx. */
+page {
+  height: 100%;
+  background: #fff;
+  color: #242528;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    'PingFang SC',
+    'Microsoft YaHei',
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  --ink: #242528;
+  --muted: #6b6d73;
+  --line: #e7e8eb;
+  --sidebar: #f7f7f8;
+  --chat-font-size: 12px;
+}
+view,
+text,
+button,
+input,
+textarea,
+scroll-view {
+  box-sizing: border-box;
+}
+button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 9px 15px;
+  border: 1px solid #e7e8eb;
+  border-radius: 7px;
+  background: #fff;
+  color: #242528;
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 0;
+}
+button::after {
+  border: 0;
+}
+button[size='mini'] {
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 7px 10px;
+}
+button[disabled] {
+  opacity: 0.45;
+  color: #242528;
+  background: #fff;
+}
+.primary {
+  background: #242528;
+  color: white;
+  border-color: #242528;
+}
+.primary[disabled] {
+  background: #242528;
+  color: white;
+}
+text {
+  overflow-wrap: anywhere;
+}
+textarea,
+input {
+  width: 100%;
+  background: #fff;
+  border: 1px solid #dbdde3;
+  border-radius: 6px;
+  padding: 10px;
+  color: #242528;
+  font-size: 12px;
+  line-height: 1.8;
+}
+textarea {
+  height: 100px;
+}
+.muted {
+  color: #6b6d73;
+  font-size: 12px;
+}
+.title {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.notice {
+  display: block;
+  background: #faf8ef;
+  color: #865615;
+  padding: 8px;
+  font-size: 11px;
+  border-radius: 4px;
+}
+.error {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fff0ec;
+  color: #8a3025;
+  padding: 10px 14px;
+  font-size: 12px;
+  z-index: 30;
+  max-height: 140px;
+  overflow: auto;
+}
+.error button {
+  margin-top: 8px;
+}

@@ -1,3 +1,4 @@
+import { miniApi } from './server/wechat-mini'
 import server from '@tanstack/react-start/server-entry'
 export { ResumeAgentSession } from './server/resume-session'
 import { runtimeConfig } from './config/runtime-defaults.mjs'
@@ -9,6 +10,8 @@ export default {
   fetch(request: Request, env: unknown) {
     const config = runtimeConfig(env as object) as unknown as BillingEnv
     const url = new URL(request.url)
+    if (url.pathname.startsWith('/api/wechat-mini/'))
+      return miniApi(request, env)
     if (
       config.APP_MODE === 'live' &&
       (request.method === 'GET' || request.method === 'HEAD') &&
