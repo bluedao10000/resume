@@ -1395,7 +1395,8 @@
 .import-footer button {
   width: 100%;
 }
-.backup-actions > * {
+.backup-actions > text,
+.backup-actions > button {
   display: block;
   margin-bottom: 12px;
 }
