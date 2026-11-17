@@ -14,7 +14,7 @@
     <view class="landing-header"><text class="brand">folio</text><text class="muted">简历定制</text></view>
     <view class="landing-intro"><text class="headline">按岗位 JD 定制简历</text>
     <text class="landing-description">导入已有简历，粘贴岗位描述。用真实经历生成独立的投递版本，在对话中修改，随时核对简历预览。</text>
-    <view class="landing-actions"><button class="primary" wx:if="{{config.loginEnabled}}" loading="{{busy}}" disabled="{{busy}}" bindtap="login">开始定制简历 →</button><button bindtap="demo" disabled="{{busy}}">试用示例</button></view>
+    <view class="landing-actions"><button class="primary" wx:if="{{config.loginEnabled}}" loading="{{busy}}" disabled="{{busy || loading}}" bindtap="login">开始定制简历 →</button><button bindtap="demo" disabled="{{busy}}">试用示例</button></view>
     <text wx:if="{{config && !config.loginEnabled}}" class="landing-note">微信登录尚未开通，可先试用示例。</text>
     <text class="landing-note">示例使用本机规则，非实时 AI 生成。</text>
     <text wx:if="{{loading}}" class="landing-note">正在连接服务…</text><button wx:if="{{!config && !loading}}" bindtap="retryConfig">重新连接</button></view>

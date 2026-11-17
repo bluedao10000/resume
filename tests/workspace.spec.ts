@@ -190,7 +190,7 @@ test('空库先引导导入，已有简历后显示 JD 定制入口', async ({ p
   await expect(page.locator('.import-prompt')).toBeVisible()
   await page.locator('.import-prompt').click()
   await page.getByRole('button', { name: '填入示例' }).click()
-  await page.getByRole('button', { name: '整理为简历' }).click()
+  await page.getByRole('button', { name: '整理为简历', exact: true }).click()
   await expect(entry).toBeVisible()
   await expect(page.locator('.nav-count')).toHaveText('1')
 })
@@ -874,6 +874,16 @@ test('删除未选简历保留当前预览，画布删除切换来源，撤销�
   await expect(page.locator('.preview-panel .resume-heading h1')).toHaveText(
     '陈星',
   )
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const store = JSON.parse(localStorage.getItem('folio:chats:v1:guest')!)
+        return store.threads.find(
+          (t: { id: string }) => t.id === store.activeId,
+        )?.resumeId
+      }),
+    )
+    .toBe('mine')
   await page.getByRole('button', { name: '删除当前简历' }).click()
   await page.getByRole('button', { name: '确认删除', exact: true }).click()
   await page.getByRole('button', { name: '编辑内容' }).click()
@@ -1237,7 +1247,7 @@ test('导入新简历，跨视图检索与 JSON 文件导入', async ({ page }) 
   await expect(page.locator('.import-prompt')).toBeVisible()
   await page.locator('.import-prompt').click()
   await page.getByRole('button', { name: '填入示例' }).click()
-  await page.getByRole('button', { name: '整理为简历' }).click()
+  await page.getByRole('button', { name: '整理为简历', exact: true }).click()
   await expect(page.locator('.preview-panel .resume-heading h1')).toHaveText(
     '陈亦舟',
   )
@@ -1444,7 +1454,10 @@ test('JSON 备份重新导入，直接聊天识别新简历', async ({ page }) =
   await openWorkspace(page)
   await expect(page.locator('.app-shell')).toHaveAttribute('data-ready', 'true')
   await resumeAction(page, '导入简历')
-  await page.locator('input[type=file]').setInputFiles({
+  await page
+    .getByText('其他导入方式 / 恢复 Folio 备份', { exact: true })
+    .click()
+  await page.getByLabel('恢复备份或导入文本', { exact: true }).setInputFiles({
     name: 'resume.json',
     mimeType: 'application/json',
     buffer: Buffer.from(
@@ -1680,4 +1693,124 @@ test('国内弹窗仅在启用时显示微信登录', async ({ page }) => {
     provider: 'wechat',
     callbackURL: '/',
   })
+})
+
+test('显式导入隔离旧资料，失败后的普通消息只修改当前简历', async ({ page }) => {
+  const requests: ReturnType<typeof AgentRequestSchema.parse>[] = []
+  await page.route('**/api/agent', (route) => {
+    const input = AgentRequestSchema.parse(route.request().postDataJSON())
+    requests.push(input)
+    if (input.intent === 'import')
+      return route.fulfill({ status: 502, json: { error: '本轮导入失败' } })
+    return route.fulfill({ json: demoAgent(input) })
+  })
+  await openWorkspace(page)
+  await resumeAction(page, '润色简历')
+  await expect(page.locator('.message-text').first()).not.toBeEmpty()
+  await resumeAction(page, '导入简历')
+  await page
+    .getByRole('textbox', { name: '简历原文', exact: true })
+    .fill('新人物\n工作职责：整理需求')
+  await page.getByRole('button', { name: '整理为简历', exact: true }).click()
+  await expect(page.getByText('本轮导入失败', { exact: true })).toBeVisible()
+  expect(requests[1]).toMatchObject({
+    intent: 'import',
+    resume: { id: 'empty-draft' },
+    library: [],
+    history: [],
+  })
+  await page
+    .getByRole('textbox', { name: '发送给 Folio' })
+    .fill('帮我精简个人简介')
+  await page.getByRole('button', { name: '发送消息' }).click()
+  await expect
+    .poll(() => requests.map((r) => r.intent))
+    .toEqual(['polish', 'import', 'polish'])
+  await expect(page.locator('.nav-count')).toHaveText('1')
+})
+
+test('损坏的空字符串存档保留原值，缺失的键才初始化', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('folio:resumes:v1:guest', '')
+    localStorage.setItem('folio:chats:v1:guest', '')
+  })
+  await openWorkspace(page)
+  await expect(page.locator('.nav-count')).toHaveText('0')
+  await expect(page.getByText(/已保存的数据格式不受支持/)).toBeVisible()
+  expect(
+    await page.evaluate(() => localStorage.getItem('folio:resumes:v1:guest')),
+  ).toBe('')
+})
+
+test('生成中其他标签页编辑来源，迟到的结果保留手工修改且不重发', async ({
+  page,
+  context,
+}) => {
+  const requests: ReturnType<typeof AgentRequestSchema.parse>[] = []
+  let complete = false
+  await page.route('**/api/config', (route) =>
+    route.fulfill({
+      json: { mode: 'demo', runtime: 'pi-durable', authConfigured: false },
+    }),
+  )
+  await page.route('**/api/agent**', (route) => {
+    if (route.request().method() === 'POST') {
+      requests.push(AgentRequestSchema.parse(route.request().postDataJSON()))
+    }
+    return route.fulfill(
+      complete
+        ? { json: { status: 'completed', result: demoAgent(requests[0]) } }
+        : { status: 202, json: { status: 'running' } },
+    )
+  })
+  await openWorkspace(page)
+  await resumeAction(page, '润色简历')
+  await expect.poll(() => requests.length).toBe(1)
+  const other = await context.newPage()
+  await other.goto('/')
+  await other.evaluate(() => {
+    const key = 'folio:resumes:v1:guest'
+    const library = JSON.parse(localStorage.getItem(key)!)
+    library[0].name = '手工修改'
+    localStorage.setItem(key, JSON.stringify(library))
+  })
+  await expect(page.locator('.preview-panel .resume-heading h1')).toHaveText(
+    '手工修改',
+  )
+  complete = true
+  await expect(page.locator('.message-text').last()).toContainText(
+    '本次修改未应用',
+  )
+  await expect(page.locator('.preview-panel .resume-heading h1')).toHaveText(
+    '手工修改',
+  )
+  expect(requests).toHaveLength(1)
+  await other.close()
+})
+
+test('持久任务停止未确认时可按原请求重试', async ({ page }) => {
+  const stops: string[] = []
+  let submissions = 0
+  await page.route('**/api/agent**', (route) => {
+    if (route.request().method() === 'DELETE') {
+      stops.push(route.request().url())
+      return stops.length === 1
+        ? route.fulfill({ status: 503, json: { error: 'unavailable' } })
+        : route.fulfill({ json: { status: 'cancelled' } })
+    }
+    if (route.request().method() === 'POST') submissions++
+    return route.fulfill({ status: 202, json: { status: 'running' } })
+  })
+  await openWorkspace(page)
+  const polling = page.waitForRequest(
+    (r) => r.method() === 'GET' && r.url().includes('/api/agent?'),
+  )
+  await resumeAction(page, '润色简历')
+  const poll = await polling
+  await page.getByRole('button', { name: '停止生成' }).click()
+  await page.getByRole('button', { name: '重试停止' }).click()
+  await expect(page.getByText('正在确认停止请求…')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '重试停止' })).toHaveCount(0)
+  expect(stops).toEqual([poll.url(), poll.url()])
+  expect(submissions).toBe(1)
 })

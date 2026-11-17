@@ -34,12 +34,13 @@ export function newChatThread(resumeId: string | null): ChatThread {
 }
 export function loadChats(scope: string): ChatStore | null {
   const value = localStorage.getItem(`folio:chats:v1:${scope}`)
-  if (!value) return null
-  const result = StoreSchema.safeParse(JSON.parse(value))
-  if (!result.success) throw new Error('无法读取历史对话，原始记录已保留。')
-  return result.data
+  if (value === null) return null
+  try {
+    return StoreSchema.parse(JSON.parse(value))
+  } catch {
+    throw new Error('无法读取历史对话，原始记录已保留。')
+  }
 }
 export function saveChats(scope: string, store: ChatStore) {
   localStorage.setItem(`folio:chats:v1:${scope}`, JSON.stringify(store))
 }
-export { boundedHistory } from '../domain/chat-context'

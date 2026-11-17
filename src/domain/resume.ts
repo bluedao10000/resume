@@ -1,4 +1,4 @@
-import { boundedHistory } from './chat-context'
+import { boundedHistory, type ContextMessage } from './chat-context'
 import { z } from 'zod'
 import { plainText } from './rich-text'
 import {
@@ -163,6 +163,19 @@ export const emptyResume: Resume = {
   template: 'editorial',
   isExample: false,
 }
+export function resumeRequestContext(
+  intent: z.infer<typeof AgentRequestSchema>['intent'],
+  selected: Resume,
+  library: Resume[],
+  messages: ContextMessage[],
+) {
+  return {
+    resume: intent === 'import' ? emptyResume : selected,
+    library: intent === 'tailor' ? library.slice(0, 20) : [],
+    history: intent === 'import' ? [] : boundedHistory(messages),
+  }
+}
+
 export const sampleJD =
   '高级产品设计师 · Notion\n负责协作产品的端到端产品设计，构建可扩展的设计系统。要求拥有用户研究、交互设计、Figma 与跨团队协作经验。能够把复杂流程转化为简单直觉的体验。加分项：B2B SaaS、英语沟通。'
 export const knownSkills = [

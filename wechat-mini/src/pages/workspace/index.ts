@@ -2,7 +2,7 @@ import '../../runtime'
 import { z } from 'zod'
 import { ImportLimitsSchema } from '../../../../src/domain/document-import'
 import { extractMiniFile } from '../../document-import'
-import { request } from '../../api'
+import { MiniRequestError, request } from '../../api'
 import {
   demoAgent,
   ResumeSchema,
@@ -50,7 +50,7 @@ let undo: MiniWorkspace | null = null
 let hidden = false
 let importSequence = 0
 let importTask: WechatMiniprogram.RequestTask | undefined
-const key = () => 'folio:mini:v1:' + scope
+const key = (identity = scope) => 'folio:mini:v1:' + identity
 const errorMessage = (error: unknown) =>
   error instanceof Error ? error.message : '操作失败，请重试。'
 type InputEvent = WechatMiniprogram.CustomEvent<{ value: string }>
@@ -73,7 +73,6 @@ Page({
     composerFocus: false,
     input: '',
     intent: 'polish' as 'import' | 'polish' | 'tailor',
-    intentName: '对话修改',
     resumes: [] as Resume[],
     selected: null as Resume | null,
     messages: [] as MiniWorkspace['messages'],
@@ -121,10 +120,11 @@ Page({
     scrollTarget: '',
   },
   async onLoad() {
+    const generation = ++epoch
     try {
-      this.setData({
-        config: configSchema.parse((await request('config')).data),
-      })
+      const config = configSchema.parse((await request('config')).data)
+      if (generation !== epoch) return
+      this.setData({ config })
       const saved: unknown = wx.getStorageSync('folio:mini:auth')
       if (saved && this.data.config?.mode === 'live') {
         const parsed = authSchema.safeParse(saved)
@@ -135,19 +135,19 @@ Page({
             undefined,
             parsed.data.token,
           )
+          if (generation !== epoch) return
           if (
             z.object({ user: z.object({ id: z.string() }) }).parse(session.data)
               .user.id !== parsed.data.user.id
           )
             throw new Error('登录状态异常，请重新登录。')
-          auth = parsed.data
-          this.enter('user:' + auth.user.id, false)
+          this.enter('user:' + parsed.data.user.id, false, parsed.data)
         }
       }
     } catch (error) {
-      this.setData({ error: errorMessage(error) })
+      if (generation === epoch) this.setData({ error: errorMessage(error) })
     } finally {
-      this.setData({ loading: false })
+      if (generation === epoch) this.setData({ loading: false })
     }
   },
   onHide() {
@@ -213,28 +213,42 @@ Page({
     } catch {
       throw new Error('本机保存失败，请释放存储空间后重试。原简历已保留。')
     }
+    if (
+      workspace?.selectedId !== validated.selectedId ||
+      workspace?.threadId !== validated.threadId ||
+      (workspace?.pending && !validated.pending)
+    )
+      this.setData({ intent: validated.selectedId ? 'polish' : 'import' })
     workspace = validated
     if (!preserveUndo) undo = null
     this.render()
   },
-  enter(nextScope: string, demo: boolean) {
+  enter(nextScope: string, demo: boolean, session: Auth | null = null) {
+    const saved: unknown = wx.getStorageSync(key(nextScope))
+    const next =
+      saved === '' || saved === undefined
+        ? initialMiniWorkspace(id(), demo)
+        : MiniWorkspaceSchema.parse(saved)
     epoch++
     importSequence++
     importTask?.abort()
     clearTimeout(timer)
+    auth = session
     scope = nextScope
     undo = null
-    const saved: unknown = wx.getStorageSync(key())
-    workspace =
-      saved === '' || saved === undefined
-        ? initialMiniWorkspace(id(), demo)
-        : MiniWorkspaceSchema.parse(saved)
+    workspace = next
     this.setData({
       importOpen: false,
       importText: '',
       importFileName: '',
       importBusy: false,
       backupOpen: false,
+      loading: false,
+      intent: next.selectedId ? 'polish' : 'import',
+      input: '',
+      edit: null,
+      composerFocus: false,
+      toolsOpen: false,
       entered: true,
       demo,
       tab: 'chat',
@@ -255,7 +269,8 @@ Page({
     }
   },
   async login() {
-    if (this.data.busy) return
+    if (this.data.busy || this.data.loading) return
+    const generation = epoch
     this.setData({ busy: true, error: '' })
     try {
       const code = await new Promise<string>((resolve, reject) =>
@@ -267,13 +282,17 @@ Page({
           fail: () => reject(new Error('微信登录失败。')),
         }),
       )
-      auth = authSchema.parse((await request('login', 'POST', { code })).data)
-      wx.setStorageSync('folio:mini:auth', auth)
-      this.enter('user:' + auth.user.id, false)
+      if (generation !== epoch) return
+      const session = authSchema.parse(
+        (await request('login', 'POST', { code })).data,
+      )
+      if (generation !== epoch) return
+      wx.setStorageSync('folio:mini:auth', session)
+      this.enter('user:' + session.user.id, false, session)
     } catch (error) {
-      this.setData({ error: errorMessage(error) })
+      if (generation === epoch) this.setData({ error: errorMessage(error) })
     } finally {
-      this.setData({ busy: false })
+      if (generation === epoch) this.setData({ busy: false })
     }
   },
   async retryConfig() {
@@ -283,17 +302,27 @@ Page({
   async logout() {
     this.closeImport()
     if (this.data.busy) return
+    const generation = epoch
+    this.setData({ busy: true })
     try {
-      if (!this.data.demo && auth)
-        await request('session', 'DELETE', undefined, auth.token)
+      if (!this.data.demo && auth) {
+        try {
+          await request('session', 'DELETE', undefined, auth.token)
+        } catch (error) {
+          if (!(error instanceof MiniRequestError && error.status === 401))
+            throw error
+        }
+      }
+      if (generation !== epoch) return
+      if (!this.data.demo) wx.removeStorageSync('folio:mini:auth')
       epoch++
       clearTimeout(timer)
       workspace = null
       undo = null
       auth = null
       scope = ''
-      wx.removeStorageSync('folio:mini:auth')
       this.setData({
+        busy: false,
         entered: false,
         selected: null,
         resumes: [],
@@ -305,7 +334,8 @@ Page({
         error: '',
       })
     } catch (error) {
-      this.setData({ error: errorMessage(error) })
+      if (generation === epoch)
+        this.setData({ busy: false, error: errorMessage(error) })
     }
   },
   input(event: InputEvent) {
@@ -342,7 +372,6 @@ Page({
         intent === 'polish' && !this.data.input
           ? '帮我精简个人简介，保留真实经历。'
           : this.data.input,
-      intentName: intent === 'tailor' ? '按 JD 定制' : '对话修改',
     })
   },
   openImport() {
@@ -444,13 +473,15 @@ Page({
       return
     this.setData({
       intent: 'import',
-      intentName: '导入简历',
       input: this.data.importText,
       tab: 'chat',
     })
+    const generation = epoch
     this.closeImport()
+    const sequence = importSequence
     await this.send()
-    if (!this.data.error) this.setData({ importText: '', importFileName: '' })
+    if (generation === epoch && sequence === importSequence && !this.data.error)
+      this.setData({ importText: '', importFileName: '' })
   },
   async send() {
     if (
@@ -483,6 +514,7 @@ Page({
   },
   async resume() {
     if (!workspace?.pending || this.data.busy) return
+    clearTimeout(timer)
     const generation = epoch,
       pending = workspace.pending,
       token = auth?.token || ''
@@ -504,7 +536,20 @@ Page({
         ),
       )
     } catch (error) {
-      if (generation === epoch) this.setData({ error: errorMessage(error) })
+      if (generation !== epoch) return
+      if (
+        error instanceof MiniRequestError &&
+        [400, 402, 410, 413, 429].includes(error.status)
+      ) {
+        try {
+          this.save({ ...workspace!, pending: null })
+          this.setData({ input: pending.text, intent: pending.intent })
+        } catch (storageError) {
+          this.setData({ error: errorMessage(storageError) })
+          return
+        }
+      }
+      this.setData({ error: errorMessage(error) })
     } finally {
       if (generation === epoch) this.setData({ busy: false })
     }
@@ -575,7 +620,7 @@ Page({
       this.save({ ...workspace!, pending: null })
       this.setData({ error: '任务已停止。' })
     } catch (error) {
-      this.setData({ error: errorMessage(error) })
+      if (generation === epoch) this.setData({ error: errorMessage(error) })
     } finally {
       if (generation === epoch) this.setData({ busy: false })
     }
@@ -624,7 +669,7 @@ Page({
       itemList: keys.map((_, i) => '历史对话 ' + (i + 1)),
       success: (result) => {
         try {
-          if (generation !== epoch) return
+          if (generation !== epoch || !workspace || workspace.pending) return
           const selectedKey = keys[result.tapIndex]
           const messages = MiniWorkspaceSchema.shape.messages.parse(
             wx.getStorageSync(selectedKey),

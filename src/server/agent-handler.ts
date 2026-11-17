@@ -112,7 +112,12 @@ export async function agentPost(
         return Response.json(
           AgentResultSchema.parse(JSON.parse(admission.run.result_json)),
         )
-      throw new BillingError('该请求正在执行或已经结束，请查看历史对话。', 409)
+      if (admission.run.status === 'reserved')
+        throw new BillingError('该请求仍待确认，请稍后恢复查询。', 409)
+      throw new BillingError(
+        '该请求已结束，没有可恢复的结果。请核对原文后重新发送。',
+        410,
+      )
     }
     let usage: TokenUsage | undefined
     try {

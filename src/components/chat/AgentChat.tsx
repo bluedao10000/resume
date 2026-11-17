@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Popover } from '@astryxdesign/core/Popover'
 import {
   AssistantRuntimeProvider,
@@ -20,67 +20,97 @@ import {
 } from 'lucide-react'
 import {
   AgentResultSchema,
+  ResumeSchema,
   inferIntent,
+  resumeRequestContext,
   isExampleResume,
   type AgentResult,
   type Resume,
   type AgentRequestSchema,
 } from '../../domain/resume'
-import type { z } from 'zod'
+import { z } from 'zod'
 import { htmlToMarkdown } from '../../lib/html-to-markdown'
 import { ChatWelcome } from './ChatWelcome'
-import {
-  boundedHistory,
-  type ChatThread,
-  type SavedChatMessage,
-} from '../../lib/chat-storage'
+import type { ChatThread, SavedChatMessage } from '../../lib/chat-storage'
 export type Intent = 'polish' | 'tailor' | 'import'
 type Props = {
   thread: ChatThread
   runtimeMode: 'pi-ai' | 'pi-durable'
+  live: boolean
   onMessages: (messages: SavedChatMessage[], running: boolean) => void
   onRequest: (request: z.infer<typeof AgentRequestSchema> | null) => void
   resume: Resume
   hasResume: boolean
   busy: boolean
   library: Resume[]
-  intent: Intent
   onResult: (r: AgentResult) => void
   onImport: () => void
   onJD: () => void
   onBusy: (b: boolean) => void
   onPolish: () => void
   result: AgentResult | null
-  command: { id: number; text: string } | null
+  command: { id: number; intent: Intent; text: string } | null
   onCommandConsumed: (id: number) => void
 }
 export function AgentChat(props: Props) {
   const [toolsOpen, setToolsOpen] = useState(false)
   const [pasteError, setPasteError] = useState('')
+  const [stop, setStop] = useState<{ query: string; failed: boolean } | null>(
+    null,
+  )
+  const requestStop = useCallback(async (query: string) => {
+    setStop({ query, failed: false })
+    try {
+      const response = await fetch(`/api/agent?${query}`, {
+        method: 'DELETE',
+        signal: AbortSignal.timeout(15000),
+      })
+      if (
+        !response.ok ||
+        !z
+          .object({ status: z.literal('cancelled') })
+          .safeParse(await response.json()).success
+      )
+        throw new Error('Stop unconfirmed')
+      setStop((current) => (current?.query === query ? null : current))
+    } catch {
+      setStop((current) =>
+        current?.query === query ? { query, failed: true } : current,
+      )
+    }
+  }, [])
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const needsImport = !props.library.some((resume) => !isExampleResume(resume))
   const current = useRef(props)
   current.current = props
   const adapter = useMemo<ChatModelAdapter>(
     () => ({
-      async *run({ messages, abortSignal }) {
+      async *run({ messages, abortSignal, runConfig }) {
         const p = current.current
         const text =
           messages[messages.length - 1]?.content
             .filter((c) => c.type === 'text')
             .map((c) => (c.type === 'text' ? c.text : ''))
             .join('\n') ?? ''
-        p.onBusy(true)
-        const latest = messages[messages.length - 1]
+        const latest = messages.at(-1)
+        const pending = p.thread.pendingRequest
+        const explicit = runConfig.custom?.intent
+        const intent =
+          explicit === 'tailor' ||
+          explicit === 'import' ||
+          explicit === 'polish'
+            ? explicit
+            : inferIntent(text, p.hasResume ? 'polish' : 'import')
         const input =
-          p.thread.pendingRequest?.requestId === latest?.id
-            ? p.thread.pendingRequest
+          pending && pending.requestId === latest?.id
+            ? pending
             : {
-                intent: inferIntent(text, p.intent),
+                intent,
                 text,
-                resume: p.resume,
-                library: p.library.slice(0, 20),
-                history: boundedHistory(
+                ...resumeRequestContext(
+                  intent,
+                  p.resume,
+                  p.library,
                   messages.slice(0, -1).flatMap((m) => {
                     if (m.role !== 'user' && m.role !== 'assistant') return []
                     const content = m.content
@@ -93,12 +123,38 @@ export function AgentChat(props: Props) {
                 threadId: p.thread.id,
                 requestId: latest?.id ?? crypto.randomUUID(),
               }
+        if (!p.hasResume && input.intent !== 'import') {
+          yield {
+            content: [{ type: 'text', text: '请先导入简历，再按岗位定制。' }],
+          }
+          return
+        }
+        // A different tab can edit the same id while this run is in flight.
+        // Normalize field order so restored requests compare like fresh ones.
+        const sourceChanged = () => {
+          if (input.intent !== 'polish') return false
+          const selected = current.current.library.find(
+            (r) => r.id === input.resume.id,
+          )
+          return (
+            !selected ||
+            JSON.stringify(ResumeSchema.parse(selected)) !==
+              JSON.stringify(ResumeSchema.parse(input.resume))
+          )
+        }
+        const conflict =
+          '简历已在其他位置更改，本次修改未应用。请核对当前简历后重新发送。'
+        if (pending && sourceChanged()) {
+          yield { content: [{ type: 'text', text: conflict }] }
+          return
+        }
+        p.onBusy(true)
         p.onRequest(input)
         const query = new URLSearchParams({
           threadId: input.threadId!,
           requestId: input.requestId!,
         })
-        let durable = p.runtimeMode === 'pi-durable'
+        let durable = p.live && p.runtimeMode === 'pi-durable'
         try {
           let response = await fetch('/api/agent', {
             method: 'POST',
@@ -148,17 +204,15 @@ export function AgentChat(props: Props) {
           if (!parsed.success)
             throw new Error('返回的数据格式不太对，麻烦再试一次。')
           const result = parsed.data
-          if (abortSignal.aborted) return
+          if (abortSignal.aborted || unmounted.current) return
+          if (result.applied && sourceChanged()) {
+            yield { content: [{ type: 'text', text: conflict }] }
+            return
+          }
           p.onResult(result)
           yield { content: [{ type: 'text', text: result.message }] }
         } catch (error) {
-          if (abortSignal.aborted) {
-            if (durable && !unmounted.current)
-              await fetch(`/api/agent?${query}`, { method: 'DELETE' }).catch(
-                () => {},
-              )
-            return
-          }
+          if (abortSignal.aborted) return
           yield {
             content: [
               {
@@ -171,11 +225,13 @@ export function AgentChat(props: Props) {
             ],
           }
         } finally {
+          if (abortSignal.aborted && durable && !unmounted.current)
+            await requestStop(query.toString())
           if (!unmounted.current) p.onBusy(false)
         }
       },
     }),
-    [],
+    [requestStop],
   )
   const unmounted = useRef(false)
   useEffect(() => {
@@ -243,6 +299,7 @@ export function AgentChat(props: Props) {
       runtime.thread.append({
         role: 'user',
         content: [{ type: 'text', text: command.text }],
+        runConfig: { custom: { intent: command.intent } },
       })
       props.onCommandConsumed(command.id)
     }
@@ -301,17 +358,28 @@ export function AgentChat(props: Props) {
           ) : null}
         </ThreadPrimitive.Viewport>
         <div className="composer-container">
+          {stop?.failed ? (
+            <div role="alert">
+              服务端尚未确认停止，任务可能仍在运行。
+              <button
+                className="outline-button"
+                onClick={() => void requestStop(stop.query)}
+              >
+                重试停止
+              </button>
+            </div>
+          ) : stop ? (
+            <p role="status">正在确认停止请求…</p>
+          ) : null}
           {pasteError ? <p role="alert">{pasteError}</p> : null}
           <ComposerPrimitive.Root className="composer">
             <ComposerPrimitive.Input
               ref={inputRef}
               aria-label="发送给 Folio"
               placeholder={
-                props.intent === 'tailor'
-                  ? '直接粘贴目标岗位的 JD…'
-                  : props.intent === 'import'
-                    ? '直接粘贴你的简历或工作经历…'
-                    : '聊聊你想怎么改，或直接粘贴岗位描述（JD）…'
+                props.hasResume
+                  ? '聊聊你想怎么改，或直接粘贴岗位描述（JD）…'
+                  : '直接粘贴你的简历或工作经历…'
               }
               rows={2}
               maxLength={20000}

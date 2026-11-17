@@ -31,6 +31,8 @@ React 19 + TanStack Start + Vite + Cloudflare Workers/Static Assets. Astryx is t
 - Do not hand-edit `src/routeTree.gen.ts`.
 - Never commit `.dev.vars`, tokens, real resumes, or `.wrangler/` data.
 
+For changes to a user or Agent workflow, check the current transitions in [the state-machine inventory](docs/harness/state-machines.md). Update the affected entry when ownership, events or effects change. Verify the normal entry point and the affected cancellation, retry or identity boundary.
+
 ## Invariants
 
 - Never invent facts, numerical achievements, qualifications, or ATS scores.

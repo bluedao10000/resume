@@ -7,6 +7,7 @@
 | 文档                               | 用途                                                  |
 | ---------------------------------- | ----------------------------------------------------- |
 | [architecture.md](architecture.md) | 当前组件/数据流、部署拓扑、目标 Agent 工具架构与决策  |
+| [state-machines.md](state-machines.md) | 当前 Web、小程序、Agent 和计费的状态转换、所有者与回归入口 |
 | [features.md](features.md)         | 页面行为、API、数据模型、失败与取消语义               |
 | [standards.md](standards.md)       | 目录边界、组件约定、事实约束、安全与变更流程          |
 | [operations.md](operations.md)     | 本地启动、OAuth/模型配置、D1 迁移、Workers 发布与排障 |

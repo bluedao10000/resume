@@ -5,6 +5,7 @@ import {
   AgentResultSchema,
   ResumeSchema,
   emptyResume,
+  resumeRequestContext,
   sampleResume,
   type AgentResult,
 } from './resume'
@@ -48,14 +49,12 @@ export function miniRequest(
   return AgentRequestSchema.parse({
     intent,
     text,
-    resume: intent === 'import' ? emptyResume : selected,
-    library: intent === 'tailor' ? state.resumes.slice(0, 20) : [],
-    history:
-      intent === 'import'
-        ? []
-        : state.messages
-            .slice(-40)
-            .map((m) => ({ role: m.role, content: m.content })),
+    ...resumeRequestContext(
+      intent,
+      selected ?? emptyResume,
+      state.resumes,
+      state.messages,
+    ),
     threadId: state.threadId,
     requestId,
   })

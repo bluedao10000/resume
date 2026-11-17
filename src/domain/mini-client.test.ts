@@ -234,3 +234,136 @@ it('discards a document response after cancelling and never sends extraction dir
     false,
   )
 })
+
+it('starts an empty library in import mode and returns to editing after each creation', async () => {
+  const { page } = client()
+  page.demo()
+  page.remove({ currentTarget: { dataset: { id: page.data.selected.id } } })
+  expect(page.data.intent).toBe('import')
+  page.data.input = '测试人物\n开发者'
+  await page.send()
+  expect(page.data.intent).toBe('polish')
+  page.chooseIntent({ currentTarget: { dataset: { intent: 'tailor' } } })
+  page.data.input = '要求 React'
+  await page.send()
+  const selected = page.data.selected.id
+  expect(page.data.intent).toBe('polish')
+  page.data.input = '精简简介'
+  await page.send()
+  expect(page.data.resumes).toHaveLength(2)
+  expect(page.data.selected.id).toBe(selected)
+})
+
+it.each([
+  [402, '额度不足'],
+  [410, '请求已结束'],
+] as const)(
+  'retains the request on timeout and restores the composer on HTTP %i',
+  async (status, error) => {
+    const { page, wx, storage } = client()
+    page.enter('user:one', false)
+    page.data.input = '测试人物\n开发者'
+    const requests: unknown[] = []
+    Object.assign(wx, {
+      request: (options: any) => {
+        requests.push(options.data)
+        if (requests.length === 1) options.fail({ errMsg: 'timeout' })
+        else options.success({ statusCode: status, data: { error } })
+      },
+    })
+    await page.send()
+    expect(page.data.pending).toBe(true)
+    await page.resume()
+    expect(requests[1]).toEqual(requests[0])
+    expect(page.data).toMatchObject({
+      pending: false,
+      busy: false,
+      error,
+      input: '测试人物\n开发者',
+      intent: 'import',
+    })
+    expect(storage.get('folio:mini:v1:user:one')).toMatchObject({
+      pending: null,
+      resumes: [],
+    })
+  },
+)
+
+it('ignores session restoration after explicit demo entry and clears editor data on scope changes', async () => {
+  const { page, wx, storage } = client()
+  storage.set('folio:mini:auth', {
+    token: 'test',
+    expiresAt: Date.now() + 60000,
+    user: { id: 'one' },
+  })
+  let finish: ((result: object) => void) | undefined
+  Object.assign(wx, {
+    request: (options: any) => {
+      if (options.url.endsWith('/config'))
+        options.success({
+          statusCode: 200,
+          data: { mode: 'live', runtime: 'pi-durable', loginEnabled: true },
+        })
+      else finish = options.success
+    },
+  })
+  const restoring = page.onLoad()
+  await vi.waitFor(() => expect(finish).toBeDefined())
+  page.demo()
+  finish!({ statusCode: 200, data: { user: { id: 'one' } } })
+  await restoring
+  expect(page.data).toMatchObject({ demo: true, entered: true, loading: false })
+  page.edit()
+  page.data.input = '未发送草稿'
+  page.enter('user:one', false)
+  expect(page.data).toMatchObject({ edit: null, input: '', resumes: [] })
+})
+
+it('keeps the local session on a logout transport failure and exits on a confirmed expired session', async () => {
+  const { page, wx, storage } = client()
+  const session = {
+    token: 'fixture',
+    user: { id: 'one' },
+    expiresAt: Date.now() + 60000,
+  }
+  storage.set('folio:mini:auth', session)
+  page.enter('user:one', false, session)
+  let expired = false
+  Object.assign(wx, {
+    request: (options: any) => {
+      if (expired)
+        options.success({ statusCode: 401, data: { error: '请先登录。' } })
+      else options.fail({ errMsg: 'timeout' })
+    },
+  })
+  await page.logout()
+  expect(page.data).toMatchObject({ entered: true, busy: false })
+  expect(storage.get('folio:mini:auth')).toEqual(session)
+  expired = true
+  await page.logout()
+  expect(page.data).toMatchObject({ entered: false, busy: false, error: '' })
+  expect(storage.has('folio:mini:auth')).toBe(false)
+})
+
+it('keeps the new identity’s reviewed document text when an older import finishes', async () => {
+  const { page, wx } = client()
+  page.enter('user:one', false)
+  let finish!: (response: object) => void
+  wx.request.mockImplementation((options) => {
+    finish = options.success
+  })
+  page.openImport()
+  page.inputImport({ detail: { value: '旧原文' } })
+  const sending = page.confirmImport()
+  page.enter('user:two', false)
+  page.openImport()
+  page.inputImport({ detail: { value: '新原文' } })
+  finish({ statusCode: 402, data: { error: '原请求被拒绝' } })
+  await sending
+  expect(page.data).toMatchObject({
+    importOpen: true,
+    importText: '新原文',
+    pending: false,
+    error: '',
+  })
+})

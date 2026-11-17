@@ -18,6 +18,15 @@ export function networkError(error: { errMsg?: string; errno?: number }) {
   return `${reason}\n服务：${apiBaseUrl}\n诊断：${detail}${typeof error.errno === 'number' ? ` (${error.errno})` : ''}`
 }
 
+export class MiniRequestError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message)
+  }
+}
+
 export function request(
   path: string,
   method: 'GET' | 'POST' | 'DELETE' = 'GET',
@@ -49,7 +58,8 @@ export function request(
           )
         } else if (response.statusCode >= 400) {
           reject(
-            new Error(
+            new MiniRequestError(
+              response.statusCode,
               typeof value?.error === 'string'
                 ? value.error
                 : `服务请求失败（HTTP ${response.statusCode}），请稍后重试。`,
