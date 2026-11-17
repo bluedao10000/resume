@@ -388,6 +388,7 @@ test('公开首页的正文和 SEO 资源不依赖客户端 JavaScript', async (
   expect(html).toContain('第二条写设计系统')
   expect(html).toContain('从第二条移到第一条')
   expect(html).toContain('虚构案例 · 非实时生成')
+  expect(html).toContain('href="/guides/excel-to-data-analyst"')
   expect(html).toContain('开始定制简历')
   expect(html).toContain('首页只记录匿名的访问与按钮点击次数')
   expect(html).toContain('删除浏览器内的简历不会同时删除这些服务端记录')
@@ -1813,4 +1814,44 @@ test('持久任务停止未确认时可按原请求重试', async ({ page }) => 
   await expect(page.getByRole('button', { name: '重试停止' })).toHaveCount(0)
   expect(stops).toEqual([poll.url(), poll.url()])
   expect(submissions).toBe(1)
+})
+
+test('简历指南从搜索直达，禁用 JavaScript 仍可读完并进入产品', async ({
+  browser,
+  request,
+  baseURL,
+}) => {
+  const path = '/guides/excel-to-data-analyst'
+  const canonical = 'https://www.codeiy.com' + path
+  const page = await browser.newPage({
+    baseURL,
+    javaScriptEnabled: false,
+    viewport: { width: 390, height: 780 },
+  })
+  try {
+    const response = await page.goto(path)
+    expect(response?.status()).toBe(200)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      '只有 Excel 活动复盘经历，怎么投数据分析岗？',
+    )
+    await expect(page.locator('article blockquote')).toHaveCount(2)
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+      'href',
+      canonical,
+    )
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true)
+    for (const resource of ['/sitemap.xml', '/llms.txt']) {
+      expect(await (await request.get(resource)).text()).toContain(canonical)
+    }
+    await page.getByRole('link', { name: '用自己的简历按 JD 定制' }).click()
+    await expect(
+      page.getByRole('heading', { name: '按岗位 JD 定制简历' }),
+    ).toBeVisible()
+  } finally {
+    await page.close()
+  }
 })

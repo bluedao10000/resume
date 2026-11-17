@@ -1,5 +1,6 @@
 import { fromMarkdown } from 'mdast-util-from-markdown'
 import type { Resume } from './resume'
+import { firstBulletPromotion } from './tailor-review'
 
 type Experience = Resume['experience'][number]
 
@@ -144,14 +145,16 @@ export function groundTailoredResume(source: Resume, proposed: Resume) {
       ),
     }),
   )
+  const resume = {
+    ...source,
+    label: proposed.label,
+    summary: summaryMatches ? proposed.summary : source.summary,
+    skills,
+    experience,
+  }
   return {
-    resume: {
-      ...source,
-      label: proposed.label,
-      summary: summaryMatches ? proposed.summary : source.summary,
-      skills,
-      experience,
-    },
+    resume,
+    promotion: firstBulletPromotion(source, resume, evidenceTextKey),
     confirmations: [...confirmations],
   }
 }

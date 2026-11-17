@@ -229,7 +229,9 @@ export function LandingPage({
                 </div>
               </div>
               <p className="landing-example-note">
-                如果下一家投的是用研岗，可以把用户访谈和可用性测试往前放。一份底稿，按不同岗位切换侧重点，不用来回折腾。
+                <a href="/guides/excel-to-data-analyst">
+                  只有 Excel 活动复盘经历，投运营和数据分析岗分别怎么写？
+                </a>
               </p>
             </div>
             <div className="landing-document" aria-label="虚构示例的定制结果">

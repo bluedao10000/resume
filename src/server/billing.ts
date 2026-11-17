@@ -10,7 +10,7 @@ import {
 import {
   agentInstructions,
   agentPrompt,
-  resumeTools,
+  toolsForIntent,
   type AgentInput,
 } from './resume-tools'
 import { z } from 'zod'
@@ -239,7 +239,7 @@ export async function reserveRun(
     system: agentInstructions,
     prompt: agentPrompt(input),
     history: input.intent === 'import' ? [] : input.history,
-    tools: resumeTools.map((tool) => ({
+    tools: toolsForIntent(input.intent).map((tool) => ({
       name: tool.name,
       description: tool.description,
       schema: z.toJSONSchema(tool.schema),

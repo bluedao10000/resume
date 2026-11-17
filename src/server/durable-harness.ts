@@ -10,6 +10,7 @@ import {
   defineTool,
   hook,
   type Storage,
+  type ToolRegistration,
   type Wake,
 } from '@earendil-works/pi-durable'
 import { z } from 'zod'
@@ -21,6 +22,7 @@ import {
   agentPrompt,
   executeResumeTool,
   resumeTools,
+  toolsForIntent,
   type AgentInput,
 } from './resume-tools'
 
@@ -112,14 +114,18 @@ export async function openResumeHarness(
     },
     context,
   )
-  setHarnessModel(harness, config.AI_MODEL)
+  harnessConfig.set(harness, { modelId: config.AI_MODEL, tools })
   return harness
 }
 export async function submitResumeTurn(harness: Harness, input: AgentInput) {
+  const config = harnessConfig.get(harness)
+  if (!config) throw new Error('Harness model is not configured')
+  const allowed = new Set(toolsForIntent(input.intent).map(({ name }) => name))
   const root = await harness.root(context, {
     agent: {
-      model: { provider: 'folio', modelId: inputModel(harness) },
+      model: { provider: 'folio', modelId: config.modelId },
       instructions: agentInstructions,
+      tools: config.tools.filter(({ name }) => allowed.has(name)),
       maxTurns: 1,
     },
   })
@@ -145,15 +151,10 @@ export async function submitResumeTurn(harness: Harness, input: AgentInput) {
   )
 }
 // Model identity is provided by the host, kept out of secrets and client input.
-const harnessModels = new WeakMap<Harness, string>()
-export function setHarnessModel(harness: Harness, modelId: string) {
-  harnessModels.set(harness, modelId)
-}
-function inputModel(harness: Harness) {
-  const model = harnessModels.get(harness)
-  if (!model) throw new Error('Harness model is not configured')
-  return model
-}
+const harnessConfig = new WeakMap<
+  Harness,
+  { modelId: string; tools: ToolRegistration[] }
+>()
 export async function resumeTurnSnapshot(harness: Harness) {
   const root = await harness.root(context)
   const view = await root.context(context)

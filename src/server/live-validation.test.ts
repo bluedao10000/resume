@@ -13,7 +13,7 @@ import {
   resumeTurnSnapshot,
   resumeTurnUsage,
 } from './durable-harness'
-import { AgentRequestSchema, sampleResume } from '../domain/resume'
+import { AgentRequestSchema, emptyResume, sampleResume } from '../domain/resume'
 import {
   billingSummary,
   prepareBilledPayload,
@@ -154,6 +154,76 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
     } finally {
       db.close()
       await rm(directory, { recursive: true, force: true })
+    }
+  },
+  120000,
+)
+
+it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
+  'configured provider tailors the same Excel activity evidence for two different jobs',
+  async () => {
+    const values = parseEnv(await readFile('.env', 'utf8'))
+    const config = {
+      ...runtimeDefaults(values.APP_MARKET),
+      ...values,
+    } as Record<string, string>
+    const feedback = '汇总社群问题，分类后反馈给产品与客服。'
+    const review = '使用 Excel 汇总阅读、报名和问卷数据并参与复盘。'
+    const resume = {
+      ...emptyResume,
+      name: '虚构求职者',
+      title: '运营专员',
+      skills: ['Excel'],
+      experience: [
+        {
+          company: '虚构学习服务',
+          role: '运营专员',
+          period: '2024—2025',
+          bullets: [feedback, review],
+        },
+      ],
+    }
+    const tailor = (text: string) =>
+      generateResume({ resume, text, intent: 'tailor' }, config)
+    const community = await tailor(
+      '社群运营。收集用户反馈，整理高频问题，与产品和客服协作。',
+    )
+    const dir = await mkdtemp(join(tmpdir(), 'folio-live-jd-'))
+    const harness = await openResumeHarness(
+      await openNodeSqliteStorage(join(dir, 'turn.db')),
+      config,
+    )
+    try {
+      const turn = await submitResumeTurn(
+        harness,
+        AgentRequestSchema.parse({
+          resume,
+          intent: 'tailor',
+          threadId: crypto.randomUUID(),
+          requestId: crypto.randomUUID(),
+          text: '数据分析岗。使用 Excel 整理活动数据，参与活动复盘；要求能独立使用 SQL 取数。',
+        }),
+      )
+      await turn.wait(context)
+      const snapshot = await resumeTurnSnapshot(harness)
+      expect(snapshot.status).toBe('completed')
+      if (snapshot.status !== 'completed') throw new Error('未取得数据岗草稿')
+      const data = snapshot.result
+      expect(['resume.tailor', 'resume.update']).toContain(
+        community.operation?.tool,
+      )
+      expect(['resume.tailor', 'resume.update']).toContain(data.operation?.tool)
+      expect(community.resume.experience[0].bullets[0]).toContain('社群问题')
+      expect(data.resume.experience[0].bullets[0]).toContain('Excel')
+      expect(data.message).toContain(`第 2 条已提到首位。原文是「${review}」`)
+      expect(data.missing.join(' ')).toMatch(/SQL/i)
+      expect(data.keywords.join(' ')).not.toMatch(/SQL/i)
+      expect(
+        [...data.resume.skills, ...data.resume.experience[0].bullets].join(' '),
+      ).not.toMatch(/SQL/i)
+    } finally {
+      await harness.close(context)
+      await rm(dir, { recursive: true, force: true })
     }
   },
   120000,

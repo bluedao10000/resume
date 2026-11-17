@@ -1,6 +1,7 @@
 import { boundedHistory, type ContextMessage } from './chat-context'
 import { z } from 'zod'
 import { plainText } from './rich-text'
+import { firstBulletPromotion } from './tailor-review'
 import {
   TemplateSchema,
   PresentationSchema,
@@ -192,6 +193,7 @@ export const knownSkills = [
   'TypeScript',
   'Python',
   'SQL',
+  'Excel',
   '数据分析',
   '项目管理',
   '用户增长',
@@ -199,22 +201,36 @@ export const knownSkills = [
   'TanStack',
   'Vite',
 ]
-export function matchJD(resume: Resume, jd: string) {
-  const required = knownSkills.filter((s) =>
-    jd.toLowerCase().includes(s.toLowerCase()),
-  )
+// A Latin term can touch Chinese text, but SQL inside NoSQL is a different word.
+function mentionsSkill(text: string, skill: string) {
+  const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const left = /^\w/.test(skill) ? '\\b' : ''
+  const right = /\w$/.test(skill) ? '\\b' : ''
+  const pattern = new RegExp(left + escaped + right, 'gi')
+  for (const match of text.matchAll(pattern)) {
+    const before = text.slice(Math.max(0, match.index - 48), match.index)
+    if (!negatesSkill.test(before)) return true
+  }
+  return false
+}
+
+const negatesSkill =
+  /(?:没有|没|未|不)(?:独立|实际|亲自)?(?:使用|用|写|接触|掌握|熟悉|了解|会|要求|需要)?过?\s*$|\b(?:no experience (?:with|in)|never used)\s*$/i
+
+export function matchJD(resume: Resume, jd: string, terms = knownSkills) {
+  const required = terms.filter((s) => mentionsSkill(jd, s))
+  if (!required.length) return { keywords: [], missing: [] }
   const evidence = [
+    resume.title,
     resume.summary,
     ...resume.skills,
+    resume.education,
     ...resume.experience.flatMap((e) => [e.role, ...e.bullets]),
-  ]
-    .map(plainText)
-    .join(' ')
-    .toLowerCase()
-  return {
-    keywords: required.filter((s) => evidence.includes(s.toLowerCase())),
-    missing: required.filter((s) => !evidence.includes(s.toLowerCase())),
-  }
+  ].map(plainText)
+  const keywords = required.filter((s) =>
+    evidence.some((text) => mentionsSkill(text, s)),
+  )
+  return { keywords, missing: required.filter((s) => !keywords.includes(s)) }
 }
 export function inferIntent(
   text: string,
@@ -287,9 +303,7 @@ export function demoAgent(
     resume.summary = lines.slice(2).join('\n') || '请继续补充你的工作经历。'
     resume.experience = []
     resume.education = ''
-    resume.skills = knownSkills.filter((s) =>
-      input.text.toLowerCase().includes(s.toLowerCase()),
-    )
+    resume.skills = knownSkills.filter((s) => mentionsSkill(input.text, s))
     resume.label = `${resume.name}的基础简历`
     changes.push(
       '保留原文，提取姓名、职位、邮箱和已出现的技能标签',
@@ -300,23 +314,43 @@ export function demoAgent(
   } else if (input.intent === 'tailor') {
     const { keywords, missing } = matchJD(resume, input.text)
     resume.label = `${input.text.split('\n')[0].slice(0, 35)} · 定制版`
-    resume.skills.sort(
-      (a, b) => Number(keywords.includes(b)) - Number(keywords.includes(a)),
+    function ranked(items: string[]) {
+      return items
+        .map((value) => {
+          const text = plainText(value)
+          return {
+            value,
+            score: keywords.filter((term) => mentionsSkill(text, term)).length,
+          }
+        })
+        .sort((a, b) => b.score - a.score)
+        .map(({ value }) => value)
+    }
+    resume.skills = ranked(resume.skills)
+    for (const job of resume.experience) job.bullets = ranked(job.bullets)
+    const promotion = firstBulletPromotion(source, resume)
+    changes.push(`从简历库选择“${source.label}”作为事实来源`)
+    if (resume.skills.some((s, i) => s !== source.skills[i]))
+      changes.push('已调整技能顺序')
+    if (
+      resume.experience.some((job, i) =>
+        job.bullets.some(
+          (bullet, j) => bullet !== source.experience[i].bullets[j],
+        ),
+      )
     )
-    resume.experience.forEach((e) =>
-      e.bullets.sort(
-        (a, b) =>
-          keywords.filter((k) => b.includes(k)).length -
-          keywords.filter((k) => a.includes(k)).length,
-      ),
-    )
-    changes.push(
-      `从简历库选择“${source.label}”作为事实来源`,
-      '按 JD 里能对应上的关键词重排技能顺序',
-      '把更贴合岗位的经历要点提到前面',
-      '单独存为新版本，原简历不动',
-    )
-    message = `定制草稿弄好了，帮你把最匹配这个岗位的经历和 ${keywords.length} 项技能排到了前面。${missing.length ? `另外 JD 里提到的「${missing.join('、')}」在你现有简历里没找到对应经历，我先没往里写，如果你确实做过可以补上。` : '投递前记得再通读核对一遍。'}\n\n当前演示模式按关键词规则排序；接入真实模型后会做更细的语境改写。`
+      changes.push('已调整工作要点顺序')
+    changes.push('单独存为新版本，原简历不动')
+    message = [
+      '已生成独立定制稿。',
+      promotion,
+      missing.length
+        ? `底稿里缺少「${missing.join('、')}」的经历依据，投递前可以核对。`
+        : '',
+      '演示模式按关键词排序。',
+    ]
+      .filter(Boolean)
+      .join('\n\n')
   } else {
     resume.experience.forEach((e) => {
       e.bullets = e.bullets.map((b) =>

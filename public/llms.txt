@@ -15,6 +15,7 @@
 
 - [Folio 首页](https://www.codeiy.com/)：产品定位、虚构定制案例、三步使用流程（`#features`）和常见问题。
 - [简历定制示例](https://www.codeiy.com/#product)：虚构的设计系统岗位案例，展示如何把同一份工作经历里的设计系统要点从第二条移到第一条，并将原简历未提及的「无障碍设计经验」单独标为「待补充」。
+- [只有 Excel 活动复盘经历，怎么投数据分析岗？](https://www.codeiy.com/guides/excel-to-data-analyst)：同一段虚构经历分别投社群运营与数据分析，展示原句顺序与 SQL 取数缺口的核对方法。
 - [额度与数据保存](https://www.codeiy.com/#privacy)：免费额度规则、浏览器本地简历库分区机制与服务端处理边界。
 - [常见问题](https://www.codeiy.com/#faq)：适用场景、JD 定制逻辑、版本隔离、AI 事实核对和导出说明。
 

@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { AgentRequestSchema, emptyResume, type Resume } from '../domain/resume'
+import {
+  AgentRequestSchema,
+  demoAgent,
+  emptyResume,
+  type Resume,
+} from '../domain/resume'
 import { executeResumeTool } from './resume-tools'
 
 const order = '维护 Java 订单查询与状态变更接口，补充参数校验与错误处理。'
@@ -199,5 +204,93 @@ describe('Folio 模拟报告的定制稿事实边界', () => {
     expect(result.resume.title).toBe(backend.title)
     expect(result.resume.experience).toEqual([second, first])
     expect(result.missing.join('\n')).toContain(order)
+  })
+})
+
+describe('同一段活动经历投两个岗位', () => {
+  const feedback = '汇总社群问题，分类后反馈给产品与客服。'
+  const source = {
+    ...operations,
+    skills: ['Excel', 'NoSQL'],
+    summary: '参与活动运营。未独立使用过 SQL。',
+    experience: [{ ...operations.experience[0], bullets: [feedback, review] }],
+  }
+  for (const mode of ['demo', 'live-tool'] as const) {
+    it(`${mode} 对照底稿说明哪条提前，只在数据岗核对 SQL`, () => {
+      const run = (jd: string, bullets: string[]) => {
+        const input = AgentRequestSchema.parse({
+          text: jd,
+          intent: 'tailor',
+          resume: source,
+        })
+        return mode === 'demo'
+          ? demoAgent(input)
+          : executeResumeTool(
+              'resume_update',
+              {
+                resume: {
+                  ...source,
+                  experience: [{ ...source.experience[0], bullets }],
+                },
+                keywords: ['Excel', 'SQL', '无关术语'],
+              },
+              input,
+            )
+      }
+      const community = run('社群运营，整理社群问题并与客服协作。', [
+        feedback,
+        review,
+      ])
+      const data = run(
+        '数据分析岗，使用 Excel 整理活动数据，要求能独立使用 SQL 取数。',
+        [safeReview, feedback],
+      )
+      expect(community.resume.experience[0].bullets[0]).toBe(feedback)
+      expect(community.message).not.toContain('提到首位')
+      expect(community.missing.join(' ')).not.toContain('SQL')
+      expect(data.keywords).toEqual(['Excel'])
+      expect(data.missing.join(' ')).toContain('SQL')
+      expect(data.message).toContain(`第 2 条已提到首位。原文是「${review}」`)
+      expect(data.resume.experience[0].bullets[0]).toBe(
+        mode === 'demo' ? review : safeReview,
+      )
+      expect(data.resume.skills).toEqual(source.skills)
+      expect(data.resume.id).not.toBe(community.resume.id)
+      expect(source.experience[0].bullets).toEqual([feedback, review])
+    })
+  }
+  it('按原句位置选材，保留其余条目；缺口必须能引用 JD', () => {
+    const input = AgentRequestSchema.parse({
+      intent: 'tailor',
+      text: '岗位要求 Excel 和 SQL。',
+      resume: source,
+      requestId: 'ranked',
+    })
+    const order = { experience: 1, bullet: 2 }
+    const args = {
+      label: '数据运营',
+      rankedBullets: [order, order],
+      keywords: ['Excel'],
+      gaps: [
+        { requirement: 'SQL', question: '你是否亲自写过查询？' },
+        { requirement: '精通 Python', question: '用过哪些库？' },
+      ],
+    }
+    const result = executeResumeTool('resume_tailor', args, input)
+    expect(result.resume.experience[0].bullets).toEqual([review, feedback])
+    expect(source.experience[0].bullets).toEqual([feedback, review])
+    expect(result.resume.id).toBe('ranked')
+    expect(result.operation?.tool).toBe('resume.tailor')
+    expect(result.missing).toEqual(['「SQL」：你是否亲自写过查询？'])
+    expect(() =>
+      executeResumeTool(
+        'resume_tailor',
+        { ...args, rankedBullets: [{ experience: 1, bullet: 3 }] },
+        input,
+      ),
+    ).toThrow()
+    expect(() =>
+      executeResumeTool('resume_tailor', args, { ...input, intent: 'polish' }),
+    ).toThrow()
   })
 })

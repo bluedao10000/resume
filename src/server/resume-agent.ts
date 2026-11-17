@@ -7,7 +7,7 @@ import {
   agentInstructions,
   agentPrompt,
   executeResumeTool,
-  resumeTools,
+  toolsForIntent,
 } from './resume-tools'
 
 export class AgentError extends Error {
@@ -78,7 +78,7 @@ export async function generateResume(
     {
       systemPrompt: agentInstructions,
       messages,
-      tools: resumeTools.map((tool) => ({
+      tools: toolsForIntent(input.intent).map((tool) => ({
         name: tool.name,
         description: tool.description,
         parameters: z.toJSONSchema(tool.schema),
