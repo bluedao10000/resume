@@ -1,6 +1,7 @@
 import { boundedHistory, type ContextMessage } from './chat-context'
 import { z } from 'zod'
 import { plainText } from './rich-text'
+import { approximateWorkTenure } from './work-tenure'
 import { firstBulletPromotion } from './tailor-review'
 import {
   TemplateSchema,
@@ -344,6 +345,7 @@ export function demoAgent(
     message = [
       '已生成独立定制稿。',
       promotion,
+      approximateWorkTenure(input.text, source.experience)?.receipt,
       missing.length
         ? `底稿里缺少「${missing.join('、')}」的经历依据，投递前可以核对。`
         : '',

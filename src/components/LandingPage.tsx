@@ -228,11 +228,18 @@ export function LandingPage({
                   <span>设计系统 · 独立投递版本，原稿保留</span>
                 </div>
               </div>
-              <p className="landing-example-note">
-                <a href="/guides/excel-to-data-analyst">
-                  只有 Excel 活动复盘经历，投运营和数据分析岗分别怎么写？
-                </a>
-              </p>
+              <div className="landing-example-note">
+                <p>
+                  <a href="/guides/excel-to-data-analyst">
+                    只有 Excel 活动复盘经历，投运营和数据分析岗分别怎么写？
+                  </a>
+                </p>
+                <p>
+                  <a href="/guides/work-experience-in-months">
+                    JD 写“约两年工作经验”，简历只有起止年月，怎么写？
+                  </a>
+                </p>
+              </div>
             </div>
             <div className="landing-document" aria-label="虚构示例的定制结果">
               <ResumeDocument resume={tailoredExample} />

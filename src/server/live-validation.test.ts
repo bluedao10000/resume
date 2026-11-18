@@ -228,3 +228,67 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
   },
   120000,
 )
+
+it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
+  'durable provider distinguishes approximate employment dates from specialist tenure',
+  async () => {
+    const values = parseEnv(await readFile('.env', 'utf8'))
+    const config = {
+      ...runtimeDefaults(values.APP_MARKET),
+      ...values,
+    } as Record<string, string>
+    const resume = {
+      ...emptyResume,
+      name: '虚构前端候选人',
+      title: '前端开发',
+      experience: [
+        {
+          company: '虚构软件公司',
+          role: '前端开发',
+          period: '2024.11—2026.10',
+          bullets: ['维护采购表单，对接审批接口并处理校验提示。'],
+        },
+      ],
+    }
+    const input = AgentRequestSchema.parse({
+      intent: 'tailor',
+      resume,
+      text: '前端开发。要求约两年工作经验；另要求至少两年无障碍测试经验。',
+      requestId: crypto.randomUUID(),
+      threadId: crypto.randomUUID(),
+    })
+    const dir = await mkdtemp(join(tmpdir(), 'folio-live-tenure-'))
+    const harness = await openResumeHarness(
+      await openNodeSqliteStorage(join(dir, 'turn.db')),
+      config,
+    )
+    try {
+      const turn = await submitResumeTurn(harness, input)
+      await turn.wait(context)
+      const snapshot = await resumeTurnSnapshot(harness)
+      expect(snapshot.status).toBe('completed')
+      if (snapshot.status !== 'completed') throw new Error('未取得岗位稿')
+      const result = snapshot.result
+      expect(result.resume.id).toBe(input.requestId)
+      expect(result.message).toContain('2024.11—2026.10，共覆盖 24 个自然月')
+      expect(result.resume.experience[0].period).toBe(
+        resume.experience[0].period,
+      )
+      expect(
+        [
+          result.resume.summary,
+          ...result.resume.skills,
+          ...result.resume.experience.flatMap((job) => job.bullets),
+        ].join(' '),
+      ).not.toMatch(/无障碍|满两年|满2年/)
+      expect(result.missing.join(' ')).toContain('无障碍')
+      expect(
+        result.missing.filter((note) => !note.includes('无障碍')).join(' '),
+      ).not.toMatch(/入职|离职|起止|工作年限|工作经验|工作时长/)
+    } finally {
+      await harness.close(context)
+      await rm(dir, { recursive: true, force: true })
+    }
+  },
+  120000,
+)
