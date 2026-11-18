@@ -168,9 +168,7 @@ export function LoginMethods({
       )}
       {!subview && (
         <>
-          {china && (
-            <p className="login-subtitle">选个顺手的方式登录 Folio</p>
-          )}
+          {china && <p className="login-subtitle">选择登录方式</p>}
           {wechat && socialButton('wechat')}
           {wechat && (other.length > 0 || email) && (
             <div className="login-divider">其他登录方式</div>
@@ -259,7 +257,7 @@ export function LoginMethods({
           <h3>用户协议</h3>
           <p>
             请仅导入你有权使用的个人经历与资料。Folio
-            帮你整理和改写简历表达，正式导出或投递前请务必自行核对。简历库与聊天记录默认存在当前浏览器，请记得定期导出备份。
+            用于整理和改写简历，导出或投递前请自行核对内容。简历库与聊天记录保存在当前浏览器，请定期导出备份。
           </p>
         </section>
       )}

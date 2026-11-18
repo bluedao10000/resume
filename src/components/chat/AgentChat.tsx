@@ -194,15 +194,14 @@ export function AgentChat(props: Props) {
             }
             if (snapshot.status !== 'completed')
               throw new Error(
-                snapshot.error ?? '刚才这步没跑完，不过当前简历还安全保留着。',
+                snapshot.error ?? '本次生成未完成，当前简历没有改动。',
               )
             data = snapshot.result
           }
           if (!response.ok)
             throw new Error((data as { error?: string }).error ?? '请求失败')
           const parsed = AgentResultSchema.safeParse(data)
-          if (!parsed.success)
-            throw new Error('返回的数据格式不太对，麻烦再试一次。')
+          if (!parsed.success) throw new Error('返回结果无法识别，请重试。')
           const result = parsed.data
           if (abortSignal.aborted || unmounted.current) return
           if (result.applied && sourceChanged()) {
@@ -220,7 +219,7 @@ export function AgentChat(props: Props) {
                 text:
                   error instanceof Error
                     ? error.message
-                    : '网络好像断了一下，稍后再试一次。',
+                    : '网络连接中断，请稍后重试。',
               },
             ],
           }
@@ -285,7 +284,7 @@ export function AgentChat(props: Props) {
         content: [
           {
             type: 'text',
-            text: '刚才那次生成中断了，麻烦重新发一下你的要求。',
+            text: '上一次生成已中断，请重新发送要求。',
           },
         ],
       })
@@ -378,7 +377,7 @@ export function AgentChat(props: Props) {
               aria-label="发送给 Folio"
               placeholder={
                 props.hasResume
-                  ? '聊聊你想怎么改，或直接粘贴岗位描述（JD）…'
+                  ? '说明想怎么改，或直接粘贴岗位描述（JD）…'
                   : '直接粘贴你的简历或工作经历…'
               }
               rows={2}

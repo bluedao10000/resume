@@ -79,7 +79,7 @@ const SITE_URL = 'https://www.codeiy.com'
 const SITE_TITLE =
   'Folio｜按岗位 JD 定制与润色简历的中文 AI 工具（支持导出 A4 PDF）'
 const SITE_DESCRIPTION =
-  '适合程序员、产品经理、设计师等一稿多投求职者的中文 AI 简历工具。导进已有简历、贴上目标岗位描述（JD），只基于真实经历重排重点、去掉空话套话，单列缺少依据的要求供核对，保留原稿并生成独立投递版本，支持 PDF、DOCX 本地导入与标准 A4 PDF 导出，自带免费 AI 额度。'
+  '适合程序员、产品经理、设计师等一稿多投求职者的中文 AI 简历工具。导入已有简历、粘贴目标岗位描述（JD），只基于真实经历重排重点、去掉空话套话，单列缺少依据的要求供核对，保留原稿并生成独立投递版本，支持 PDF、DOCX 本地导入与标准 A4 PDF 导出，提供免费 AI 额度。'
 const structuredData = {
   '@context': 'https://schema.org',
   '@graph': [
@@ -1379,7 +1379,7 @@ function Workspace({
               <FileText size={23} />
               <div>
                 <strong>打印 / 保存为 PDF</strong>
-                <span>标准 A4 排版 · 在打印窗口选「另存为 PDF」即可</span>
+                <span>A4 排版 · 在打印窗口选择「另存为 PDF」</span>
               </div>
               <ArrowRight size={17} />
             </button>
@@ -1392,13 +1392,13 @@ function Workspace({
               <ArrowDownToLine size={23} />
               <div>
                 <strong>导出结构化 JSON</strong>
-                <span>本地完整备份 · 换设备时可随时导回 Folio</span>
+                <span>完整备份 · 可重新导入 Folio</span>
               </div>
               <ArrowRight size={17} />
             </button>
           </div>
           <p className="field-hint">
-            多页长简历会自动分页。打印时建议关掉浏览器的「页眉和页脚」，版面更干净。
+            多页简历会自动分页。打印时建议关闭浏览器的「页眉和页脚」。
           </p>
         </Modal>
       ) : null}

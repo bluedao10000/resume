@@ -455,7 +455,7 @@ test('公开首页的正文和 SEO 资源不依赖客户端 JavaScript', async (
   expect(html).toContain('href="/guides/summary-experience-duplication"')
   expect(html).toContain('开始定制简历')
   expect(html).toContain('首页只记录匿名的访问与按钮点击次数')
-  expect(html).toContain('删除浏览器内的简历不会同时删除这些服务端记录')
+  expect(html).toContain('删除浏览器里的简历，不会同时删除这些服务端记录')
   expect(html).toContain('rel="canonical" href="https://www.codeiy.com/"')
   expect(html).toContain('property="og:image"')
   expect(html).toContain('application/ld+json')
