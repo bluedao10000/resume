@@ -294,3 +294,70 @@ describe('同一段活动经历投两个岗位', () => {
     ).toThrow()
   })
 })
+
+describe('简介与采购项目的信息分工', () => {
+  const evidence = '维护采购表单，对接审批接口并处理校验提示。'
+  const source: Resume = {
+    ...emptyResume,
+    id: 'fictional-procurement-source',
+    label: '业务前端底稿',
+    name: '虚构前端候选人',
+    title: '业务前端开发',
+    summary: evidence,
+    skills: ['React'],
+    experience: [
+      {
+        company: '虚构采购科技',
+        role: '前端开发',
+        period: '2024.03—2026.10',
+        bullets: [evidence, '参与采购后台列表页维护。'],
+      },
+    ],
+  }
+  const jd =
+    '业务前端开发。负责企业采购后台表单维护，对接审批接口并处理校验提示；使用 React。'
+
+  for (const mode of ['demo', 'live-tool'] as const) {
+    it(`${mode} 精简同义简介但保留完整证据和方向性项目关键词`, () => {
+      const run = (summary: string) => {
+        const input = AgentRequestSchema.parse({
+          intent: 'tailor',
+          text: jd,
+          resume: { ...source, summary },
+          requestId: `procurement-${mode}`,
+        })
+        return mode === 'demo'
+          ? demoAgent(input)
+          : executeResumeTool(
+              'resume_tailor',
+              {
+                label: '业务前端岗位稿',
+                rankedBullets: [{ experience: 1, bullet: 1 }],
+                keywords: ['React'],
+              },
+              input,
+            )
+      }
+
+      const before = structuredClone(source)
+      const result = run(evidence)
+      expect(result.resume.summary).toBe(source.title)
+      expect(result.resume.experience[0].bullets).toEqual(
+        source.experience[0].bullets,
+      )
+      expect(result.resume.experience[0]).toMatchObject({
+        company: source.experience[0].company,
+        role: source.experience[0].role,
+        period: source.experience[0].period,
+      })
+      expect(JSON.stringify(result.resume)).not.toContain('主导')
+      expect(result.resume.id).not.toBe(source.id)
+      expect(result.missing.join(' ')).not.toContain(evidence)
+      expect(source).toEqual(before)
+
+      const directional = run('主要做企业采购后台前端开发。')
+      expect(directional.resume.summary).toBe('主要做企业采购后台前端开发。')
+      expect(directional.resume.experience[0].bullets[0]).toBe(evidence)
+    })
+  }
+})

@@ -142,6 +142,68 @@ test('JD 定制入口直接可见，取消不生成，确认保留来源且刷�
   expect(requests).toHaveLength(1)
 })
 
+test('JD 定制精简重复简介，保留证明细节且原稿仍可打开', async ({ page }) => {
+  const { emptyResume } = await import('../src/domain/resume')
+  const evidence = '维护采购表单，对接审批接口并处理校验提示。'
+  const source = {
+    ...emptyResume,
+    id: 'fictional-procurement-source',
+    label: '虚构业务前端底稿',
+    name: '虚构前端候选人',
+    title: '业务前端开发',
+    summary: evidence,
+    skills: ['React'],
+    experience: [
+      {
+        company: '虚构采购科技',
+        role: '前端开发',
+        period: '2024.03—2026.10',
+        bullets: [evidence, '参与采购后台列表页维护。'],
+      },
+    ],
+  }
+  await page.addInitScript((resume) => {
+    localStorage.setItem('folio:resumes:v1:guest', JSON.stringify([resume]))
+  }, source)
+  const requests: unknown[] = []
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && request.url().endsWith('/api/agent'))
+      requests.push(request.postDataJSON())
+  })
+  await openWorkspace(page)
+  await page.getByRole('button', { name: '按 JD 定制', exact: true }).click()
+  await page
+    .getByLabel('岗位描述（JD）')
+    .fill(
+      '业务前端开发。负责企业采购后台表单维护，对接审批接口并处理校验提示；使用 React。',
+    )
+  await page.getByRole('button', { name: '生成定制草稿' }).click()
+  await expect(page.locator('.preview-panel .resume-summary')).toHaveText(
+    source.title,
+  )
+  await expect(page.locator('.preview-panel .resume-paper')).toContainText(
+    evidence,
+  )
+  await expect(page.locator('.nav-count')).toHaveText('2')
+  const saved = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem('folio:resumes:v1:guest')!),
+  )
+  expect(saved[0].id).not.toBe(source.id)
+  expect(saved[1]).toEqual(source)
+  expect(saved[0].experience).toEqual(source.experience)
+  expect(JSON.stringify(saved[0])).not.toContain('主导')
+
+  await page.getByRole('button', { name: '我的简历库' }).click()
+  await page.locator('.resume-library-card').last().click()
+  await expect(page.locator('.preview-panel .resume-summary')).toHaveText(
+    evidence,
+  )
+  await expect(page.locator('.preview-panel .resume-paper')).toContainText(
+    evidence,
+  )
+  expect(requests).toHaveLength(1)
+})
+
 test('手机 JD 入口不挤出发送按钮或增加对话顶部占用，生成时禁用', async ({
   page,
 }) => {
@@ -390,6 +452,7 @@ test('公开首页的正文和 SEO 资源不依赖客户端 JavaScript', async (
   expect(html).toContain('虚构案例 · 非实时生成')
   expect(html).toContain('href="/guides/excel-to-data-analyst"')
   expect(html).toContain('href="/guides/work-experience-in-months"')
+  expect(html).toContain('href="/guides/summary-experience-duplication"')
   expect(html).toContain('开始定制简历')
   expect(html).toContain('首页只记录匿名的访问与按钮点击次数')
   expect(html).toContain('删除浏览器内的简历不会同时删除这些服务端记录')
@@ -1825,6 +1888,10 @@ for (const [path, title] of [
   [
     '/guides/work-experience-in-months',
     'JD 写“约两年工作经验”，简历只有起止年月，怎么写？',
+  ],
+  [
+    '/guides/summary-experience-duplication',
+    '个人简介和工作经历重复，按 JD 定制时该删哪句？',
   ],
 ])
   test(`简历指南关闭 JavaScript 仍可读完并进入产品 · ${title}`, async ({

@@ -66,6 +66,16 @@ function experienceKey({ company, role, period }: Experience) {
   return JSON.stringify([company, role, period])
 }
 
+export function tailoredSummary(source: Resume) {
+  const summary = evidenceTextKey(source.summary)
+  const duplicatesEvidence = source.experience.some((job) =>
+    job.bullets.some((bullet) => evidenceTextKey(bullet) === summary),
+  )
+  return duplicatesEvidence && source.title.trim()
+    ? source.title.trim()
+    : source.summary
+}
+
 // Only items matching original evidence can reach the document. Proposal order is a preference;
 // omitted originals and duplicate originals retain their evidence.
 function reorderEvidence<T>(
@@ -112,9 +122,14 @@ export function groundTailoredResume(source: Resume, proposed: Resume) {
     if (proposed[field] !== source[field])
       requireConfirmation(label, proposed[field])
 
+  const summary = tailoredSummary(source)
   const summaryMatches =
+    evidenceTextKey(proposed.summary) === evidenceTextKey(summary)
+  const repeatedSourceSummary =
+    summary !== source.summary &&
     evidenceTextKey(proposed.summary) === evidenceTextKey(source.summary)
-  if (!summaryMatches) requireConfirmation('个人简介', proposed.summary)
+  if (!summaryMatches && !repeatedSourceSummary)
+    requireConfirmation('个人简介', proposed.summary)
 
   const skills = reorderEvidence(
     source.skills,
@@ -148,7 +163,7 @@ export function groundTailoredResume(source: Resume, proposed: Resume) {
   const resume = {
     ...source,
     label: proposed.label,
-    summary: summaryMatches ? proposed.summary : source.summary,
+    summary: summaryMatches ? proposed.summary : summary,
     skills,
     experience,
   }

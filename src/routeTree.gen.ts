@@ -16,6 +16,7 @@ import { Route as ApiEventsRouteImport } from './routes/api/events'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as BillingAlipayReturnRouteImport } from './routes/billing/alipay-return'
 import { Route as GuidesExcelToDataAnalystRouteImport } from './routes/guides/excel-to-data-analyst'
+import { Route as GuidesSummaryExperienceDuplicationRouteImport } from './routes/guides/summary-experience-duplication'
 import { Route as GuidesWorkExperienceInMonthsRouteImport } from './routes/guides/work-experience-in-months'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiBillingIndexRouteImport } from './routes/api/billing/index'
@@ -60,6 +61,12 @@ const GuidesExcelToDataAnalystRoute =
   GuidesExcelToDataAnalystRouteImport.update({
     id: '/guides/excel-to-data-analyst',
     path: '/guides/excel-to-data-analyst',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const GuidesSummaryExperienceDuplicationRoute =
+  GuidesSummaryExperienceDuplicationRouteImport.update({
+    id: '/guides/summary-experience-duplication',
+    path: '/guides/summary-experience-duplication',
     getParentRoute: () => rootRouteImport,
   } as any)
 const GuidesWorkExperienceInMonthsRoute =
@@ -117,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/billing/alipay-return': typeof BillingAlipayReturnRoute
   '/guides/excel-to-data-analyst': typeof GuidesExcelToDataAnalystRoute
+  '/guides/summary-experience-duplication': typeof GuidesSummaryExperienceDuplicationRoute
   '/guides/work-experience-in-months': typeof GuidesWorkExperienceInMonthsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -135,6 +143,7 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/billing/alipay-return': typeof BillingAlipayReturnRoute
   '/guides/excel-to-data-analyst': typeof GuidesExcelToDataAnalystRoute
+  '/guides/summary-experience-duplication': typeof GuidesSummaryExperienceDuplicationRoute
   '/guides/work-experience-in-months': typeof GuidesWorkExperienceInMonthsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -154,6 +163,7 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/billing/alipay-return': typeof BillingAlipayReturnRoute
   '/guides/excel-to-data-analyst': typeof GuidesExcelToDataAnalystRoute
+  '/guides/summary-experience-duplication': typeof GuidesSummaryExperienceDuplicationRoute
   '/guides/work-experience-in-months': typeof GuidesWorkExperienceInMonthsRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/billing/checkout': typeof ApiBillingCheckoutRoute
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/billing/alipay-return'
     | '/guides/excel-to-data-analyst'
+    | '/guides/summary-experience-duplication'
     | '/guides/work-experience-in-months'
     | '/api/auth/$'
     | '/api/billing/checkout'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/billing/alipay-return'
     | '/guides/excel-to-data-analyst'
+    | '/guides/summary-experience-duplication'
     | '/guides/work-experience-in-months'
     | '/api/auth/$'
     | '/api/billing/checkout'
@@ -210,6 +222,7 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/billing/alipay-return'
     | '/guides/excel-to-data-analyst'
+    | '/guides/summary-experience-duplication'
     | '/guides/work-experience-in-months'
     | '/api/auth/$'
     | '/api/billing/checkout'
@@ -229,6 +242,7 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   BillingAlipayReturnRoute: typeof BillingAlipayReturnRoute
   GuidesExcelToDataAnalystRoute: typeof GuidesExcelToDataAnalystRoute
+  GuidesSummaryExperienceDuplicationRoute: typeof GuidesSummaryExperienceDuplicationRoute
   GuidesWorkExperienceInMonthsRoute: typeof GuidesWorkExperienceInMonthsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute
@@ -289,6 +303,13 @@ declare module '@tanstack/react-router' {
       path: '/guides/excel-to-data-analyst'
       fullPath: '/guides/excel-to-data-analyst'
       preLoaderRoute: typeof GuidesExcelToDataAnalystRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guides/summary-experience-duplication': {
+      id: '/guides/summary-experience-duplication'
+      path: '/guides/summary-experience-duplication'
+      fullPath: '/guides/summary-experience-duplication'
+      preLoaderRoute: typeof GuidesSummaryExperienceDuplicationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/guides/work-experience-in-months': {
@@ -365,6 +386,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   BillingAlipayReturnRoute: BillingAlipayReturnRoute,
   GuidesExcelToDataAnalystRoute: GuidesExcelToDataAnalystRoute,
+  GuidesSummaryExperienceDuplicationRoute:
+    GuidesSummaryExperienceDuplicationRoute,
   GuidesWorkExperienceInMonthsRoute: GuidesWorkExperienceInMonthsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,

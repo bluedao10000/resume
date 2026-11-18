@@ -239,6 +239,11 @@ export function LandingPage({
                     JD 写“约两年工作经验”，简历只有起止年月，怎么写？
                   </a>
                 </p>
+                <p>
+                  <a href="/guides/summary-experience-duplication">
+                    个人简介和工作经历重复，按 JD 定制时该删哪句？
+                  </a>
+                </p>
               </div>
             </div>
             <div className="landing-document" aria-label="虚构示例的定制结果">

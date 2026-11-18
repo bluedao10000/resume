@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { plainText } from './rich-text'
 import { approximateWorkTenure } from './work-tenure'
 import { firstBulletPromotion } from './tailor-review'
+import { tailoredSummary } from './tailor-evidence'
 import {
   TemplateSchema,
   PresentationSchema,
@@ -315,6 +316,7 @@ export function demoAgent(
   } else if (input.intent === 'tailor') {
     const { keywords, missing } = matchJD(resume, input.text)
     resume.label = `${input.text.split('\n')[0].slice(0, 35)} · 定制版`
+    resume.summary = tailoredSummary(resume)
     function ranked(items: string[]) {
       return items
         .map((value) => {

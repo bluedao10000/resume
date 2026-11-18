@@ -292,3 +292,91 @@ it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
   },
   120000,
 )
+
+it.skipIf(process.env.FOLIO_LIVE_VALIDATION !== '1')(
+  'durable tailoring keeps detailed evidence once and retains directional procurement summaries',
+  async () => {
+    const values = parseEnv(await readFile('.env', 'utf8'))
+    const config = {
+      ...runtimeDefaults(values.APP_MARKET),
+      ...values,
+    } as Record<string, string>
+    const evidence = '维护采购表单，对接审批接口并处理校验提示。'
+    const resume = {
+      ...emptyResume,
+      id: 'fictional-procurement-source',
+      label: '虚构业务前端底稿',
+      name: '虚构前端候选人',
+      title: '业务前端开发',
+      summary: evidence,
+      skills: ['React'],
+      experience: [
+        {
+          company: '虚构采购科技',
+          role: '前端开发',
+          period: '2024.03—2026.10',
+          bullets: [evidence, '参与采购后台列表页维护。'],
+        },
+      ],
+    }
+    const jd =
+      '业务前端开发。负责企业采购后台表单维护，对接审批接口并处理校验提示；使用 React。'
+
+    async function tailor(summary: string) {
+      const input = AgentRequestSchema.parse({
+        intent: 'tailor',
+        resume: { ...resume, summary },
+        text: jd,
+        requestId: crypto.randomUUID(),
+        threadId: crypto.randomUUID(),
+      })
+      const dir = await mkdtemp(join(tmpdir(), 'folio-live-summary-'))
+      const harness = await openResumeHarness(
+        await openNodeSqliteStorage(join(dir, 'turn.db')),
+        config,
+      )
+      try {
+        const turn = await submitResumeTurn(harness, input)
+        await turn.wait(context)
+        const snapshot = await resumeTurnSnapshot(harness)
+        expect(snapshot.status).toBe('completed')
+        if (snapshot.status !== 'completed') throw new Error('未取得岗位稿')
+        return { input, result: snapshot.result }
+      } finally {
+        await harness.close(context)
+        await rm(dir, { recursive: true, force: true })
+      }
+    }
+
+    const { input, result } = await tailor(evidence)
+    const output = JSON.stringify({
+      summary: result.resume.summary,
+      bullets: result.resume.experience[0]?.bullets,
+    })
+    expect(output).toContain('维护采购表单')
+    expect(result.resume.experience[0].bullets[0]).toContain('对接审批接口')
+    expect(result.resume.experience[0].bullets[0]).toContain('校验提示')
+    expect(result.resume.summary.trim()).not.toBe('')
+    expect(result.resume.summary, output).not.toContain('对接审批接口')
+    expect(result.resume.summary).not.toContain('校验提示')
+    expect(result.resume.summary).toMatch(/业务前端|前端开发|采购后台/)
+    expect(result.resume.experience[0]).toMatchObject({
+      company: resume.experience[0].company,
+      role: resume.experience[0].role,
+      period: resume.experience[0].period,
+    })
+    expect(JSON.stringify(result.resume)).not.toContain('主导')
+    expect(result.resume.id).toBe(input.requestId)
+    expect(result.resume.id).not.toBe(resume.id)
+    expect(resume.summary).toBe(evidence)
+    expect(resume.experience[0].bullets[0]).toBe(evidence)
+
+    const directional = await tailor('主要做企业采购后台前端开发。')
+    expect(directional.result.resume.summary).toContain('采购后台')
+    expect(directional.result.resume.summary).not.toContain('对接审批接口')
+    expect(directional.result.resume.experience[0].bullets[0]).toContain(
+      '对接审批接口',
+    )
+  },
+  120000,
+)
