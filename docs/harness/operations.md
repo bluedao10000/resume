@@ -4,6 +4,12 @@
 
 本手册描述当前已实现的运行方式。`.env` 唯一配置入口、D1 认证与计费存储、Worker Secrets 同步和自定义域名部署已实现；[技术架构设计](../architecture/technical-architecture.md) 中的 pi 双运行时已实施，云端简历/对话同步仍待实施。
 
+## 中国站域名迁移（2026-11-19）
+
+Folio 的正式入口、SEO 主域和新订单异步通知使用 `r.codeiy.com`。继续使用原 Worker、`folio-cn` D1 和 Durable Object。微信和 GitHub 授权仍登记原来的 www 回调，由旧域名入口按固定路径转到 r，Better Auth 在 r 校验 state。历史 Folio 订单沿 www 通知地址进入，最终交回 Folio 验签。域名切换后用户在 r 重新登录原账户。
+
+简历和聊天存档随浏览器 origin 分区。使用原浏览器从 [迁移页](https://r.codeiy.com/folio-move.html) 开始；在新旧两个窗口确认后，当前身份的草稿按 ID 合并，已存在的版本保留。其他设备需在各自原浏览器上操作。
+
 ## 本地开发
 
 ```bash
@@ -227,7 +233,7 @@ codeiy 网站应用 AppID 为 `wxe4d137338b962c85`。在项目根 `.env` 设置�
 
 ```dotenv
 APP_MARKET=cn
-BETTER_AUTH_URL=https://www.codeiy.com
+BETTER_AUTH_URL=https://r.codeiy.com
 WECHAT_APP_ID=wxe4d137338b962c85
 WECHAT_APP_SECRET=在本机填写开放平台生成的AppSecret
 ```
@@ -258,8 +264,8 @@ WECHAT_APP_SECRET=在本机填写开放平台生成的AppSecret
 | `APP_MARKET` | `cn` |
 | `APP_MODE` | `live` |
 | `CLOUDFLARE_WORKER_NAME` | `codeiy-main-site` |
-| `BETTER_AUTH_URL` | `https://www.codeiy.com` |
-| `CLOUDFLARE_CUSTOM_DOMAIN` | `www.codeiy.com` |
+| `BETTER_AUTH_URL` | `https://r.codeiy.com` |
+| `CLOUDFLARE_CUSTOM_DOMAIN` | `r.codeiy.com` |
 | `CLOUDFLARE_CUSTOM_DOMAIN_ALIAS` | `codeiy.com` |
 | `CLOUDFLARE_D1_DATABASE_NAME` | `folio-cn` |
 | `CLOUDFLARE_D1_DATABASE_ID` | `23287ed4-8f9a-43d2-88b5-e309a364a94f` |

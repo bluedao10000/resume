@@ -2,4 +2,4 @@
 User-agent: *
 Disallow: /api/
 
-Sitemap: https://www.codeiy.com/sitemap.xml
+Sitemap: https://r.codeiy.com/sitemap.xml

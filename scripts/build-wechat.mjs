@@ -4,7 +4,7 @@ import { parseEnv } from 'node:util'
 const env = fs.existsSync('.env')
   ? parseEnv(fs.readFileSync('.env', 'utf8'))
   : {}
-const base = env.BETTER_AUTH_URL || 'https://www.codeiy.com'
+const base = env.BETTER_AUTH_URL || 'https://r.codeiy.com'
 if (
   new URL(base).protocol !== 'https:' &&
   new URL(base).hostname !== 'localhost'

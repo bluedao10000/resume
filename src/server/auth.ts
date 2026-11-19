@@ -29,6 +29,12 @@ export function getAuth() {
   if (!authConfigured(config)) throw new Error('AUTH_NOT_CONFIGURED')
   const methods = authMethods(config)
   const china = config.APP_MARKET === 'cn'
+  // The OAuth apps already trust www. Relay these two callbacks to the new
+  // origin, where Better Auth verifies its state and completes the session.
+  const legacyCallback = (provider: string) =>
+    china && config.BETTER_AUTH_URL === 'https://r.codeiy.com'
+      ? { redirectURI: 'https://www.codeiy.com/api/auth/callback/' + provider }
+      : {}
   return betterAuth({
     database: config.DB,
     secret: config.BETTER_AUTH_SECRET,
@@ -62,6 +68,7 @@ export function getAuth() {
             clientId: config.WECHAT_APP_ID,
             clientSecret: config.WECHAT_APP_SECRET,
             lang: 'cn',
+            ...legacyCallback('wechat'),
           },
         }),
       ...(methods.market &&
@@ -75,6 +82,7 @@ export function getAuth() {
         github: {
           clientId: config.GITHUB_CLIENT_ID,
           clientSecret: config.GITHUB_CLIENT_SECRET,
+          ...legacyCallback('github'),
         },
       }),
     },

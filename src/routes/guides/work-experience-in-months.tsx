@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 const title = 'JD 写“约两年工作经验”，简历只有起止年月，怎么写？'
 const description =
   '用 2024.11 到 2026.10 的虚构任职记录演算：如何数覆盖月份、扣除重叠，以及什么时候需要单独核对全职或专项经验。'
-const url = 'https://www.codeiy.com/guides/work-experience-in-months'
+const url = 'https://r.codeiy.com/guides/work-experience-in-months'
 
 export const Route = createFileRoute('/guides/work-experience-in-months')({
   component: Guide,

@@ -364,6 +364,7 @@ export function LandingPage({
       <footer className="landing-footer">
         <span>Folio · AI 简历修改与岗位定制</span>
         <a href="#privacy">额度与数据保存</a>
+        <a href="https://r.codeiy.com/folio-move.html">迁移旧站本机资料</a>
       </footer>
     </div>
   )

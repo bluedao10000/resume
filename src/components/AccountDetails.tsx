@@ -74,7 +74,7 @@ export function AccountDetails({
         ) : null}
         <div>
           <dt>存储</dt>
-          <dd>当前浏览器</dd>
+          <dd>当前浏览器 · <a href="https://r.codeiy.com/folio-move.html">迁移旧站资料</a></dd>
         </div>
       </dl>
       {failed ? (

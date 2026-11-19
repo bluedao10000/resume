@@ -6,7 +6,7 @@ For implementation beyond the prototype, read `docs/architecture/technical-archi
 
 ## Branches and deployment
 
-- `cn` independently operates the mainland China site at `https://www.codeiy.com`. Deploy it to Cloudflare Worker `codeiy-main-site` with D1 database `folio-cn` and `APP_MARKET=cn`.
+- `cn` independently operates the mainland China site at `https://r.codeiy.com`. Deploy it to Cloudflare Worker `codeiy-main-site` with D1 database `folio-cn` and `APP_MARKET=cn`.
 - Do not merge `cn` into `main`. `main` maintains its own site at `https://r.story2u.xyz`. When a fix is requested for both sites, apply and verify it separately on each branch.
 
 ## Stack

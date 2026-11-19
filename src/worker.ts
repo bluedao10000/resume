@@ -10,6 +10,28 @@ export default {
   fetch(request: Request, env: unknown) {
     const config = runtimeConfig(env as object) as unknown as BillingEnv
     const url = new URL(request.url)
+    const movingFromWWW =
+      config.BETTER_AUTH_URL === 'https://r.codeiy.com' &&
+      url.origin === 'https://www.codeiy.com'
+    const folioReturn = [
+      '/api/auth/callback/wechat',
+      '/api/auth/callback/github',
+      '/billing/alipay-return',
+    ].includes(url.pathname)
+    if (
+      movingFromWWW &&
+      (request.method === 'GET' || request.method === 'HEAD') &&
+      (url.pathname === '/' || folioReturn)
+    ) {
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: config.BETTER_AUTH_URL + url.pathname + url.search,
+          'Cache-Control': 'no-store',
+          'Referrer-Policy': 'no-referrer',
+        },
+      })
+    }
     if (url.pathname.startsWith('/api/wechat-mini/'))
       return miniApi(request, env)
     if (

@@ -75,7 +75,7 @@ import {
   removeResume,
   restoreResumeLibrary,
 } from '../domain/resume-library'
-const SITE_URL = 'https://www.codeiy.com'
+const SITE_URL = 'https://r.codeiy.com'
 const SITE_TITLE =
   'Folio｜按岗位 JD 定制与润色简历的中文 AI 工具（支持导出 A4 PDF）'
 const SITE_DESCRIPTION =

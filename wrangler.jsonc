@@ -40,7 +40,7 @@
   ],
   "routes": [
     {
-      "pattern": "www.codeiy.com",
+      "pattern": "r.codeiy.com",
       "custom_domain": true
     },
     {
@@ -59,14 +59,14 @@
     "WECHAT_APP_ID": "wxe4d137338b962c85",
     "APP_MARKET": "cn",
     "APP_MODE": "live",
-    "BETTER_AUTH_URL": "https://www.codeiy.com",
+    "BETTER_AUTH_URL": "https://r.codeiy.com",
     "GITHUB_CLIENT_ID": "Ov23likkUgOXVEcErusn",
     "AUTH_EMAIL_FROM": "Folio <login@auth.codeiy.com>",
     "ALIPAY_MODE": "production",
     "ALIPAY_APP_ID": "2021007120653083",
     "ALIPAY_PUBLIC_KEY": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3nrlrDQ9Y6ruc0LYKfPvPCVxGx/AljC0G0mAF/jYY+mBemRuLLLLnnRli61pGi1NwkdsCdIEZPTyM3TbfbR7z7kuuSrEn4gO7x2Ji1YImb6eEK3syZ80iyhIpvaec+WQZ7zIFpvzuim+7GQ048+grD62lhbnd7EvChpbCabgsWga7rGL9MP0Z4vM2q0DNz6//w35A25m4mGyiVUuCkXOuyB8cdYsFQPAVDlYRYqN0SvM2CyD7DYYUcUyNM5DsHU9J1P5Vywm9dZv7xWbriUVVp2kkQqLnsW77Tw36z4bphZyA46R2KdvjMTL8teAp9qPFVUoQErCnkPTWm3Su0vwFQIDAQAB",
     "ALIPAY_SELLER_ID": "2088002913574564",
-    "ALIPAY_NOTIFY_URL": "https://www.codeiy.com/api/billing/alipay/notify"
+    "ALIPAY_NOTIFY_URL": "https://r.codeiy.com/api/billing/alipay/notify"
   },
   "secrets": {
     "required": [

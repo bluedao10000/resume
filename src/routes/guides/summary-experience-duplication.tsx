@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 const title = '个人简介和工作经历重复，按 JD 定制时该删哪句？'
 const description =
   '用同一份虚构业务前端简历对照改前改后：把采购表单、审批接口和校验提示留在项目里，简介只概括工作方向，并识别关键词重复但信息互补的两句话。'
-const url = 'https://www.codeiy.com/guides/summary-experience-duplication'
+const url = 'https://r.codeiy.com/guides/summary-experience-duplication'
 
 export const Route = createFileRoute('/guides/summary-experience-duplication')({
   component: Guide,

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>迁移本机 Folio 资料</title>
+    <style>
+      body {
+        max-width: 38rem;
+        margin: 14vh auto;
+        padding: 0 1.5rem;
+        font: 17px/1.7 system-ui;
+        background: #fafaf8;
+        color: #20231f;
+      }
+      button,
+      a {
+        font: inherit;
+      }
+      button {
+        padding: 0.4rem 1rem;
+      }
+      p {
+        overflow-wrap: anywhere;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>迁移本机 Folio 资料</h1>
+      <p id="message" role="status"></p>
+      <button id="action" hidden></button>
+      <p><a href="https://r.codeiy.com/">返回 Folio</a></p>
+    </main>
+    <script type="module">
+      const oldOrigin = 'https://www.codeiy.com',
+        newOrigin = 'https://r.codeiy.com'
+      const message = document.querySelector('#message'),
+        button = document.querySelector('#action')
+      let source, scope, sessionLabel
+      const channel = 'folio-local-move-v1'
+      const keys = (s) => ['folio:resumes:v1:' + s, 'folio:chats:v1:' + s]
+      function action(label, fn) {
+        button.hidden = false
+        button.textContent = label
+        button.onclick = () => Promise.resolve().then(fn).catch(fail)
+      }
+      function fail() {
+        message.textContent =
+          '迁移未完成。请用原浏览器登录同一 Folio 账户后重试。旧站原稿仍保存在本机。'
+        button.hidden = true
+      }
+      async function identity() {
+        const r = await fetch('/api/auth/get-session', {
+          cache: 'no-store',
+          credentials: 'same-origin',
+        })
+        if (!r.ok) throw Error()
+        const v = await r.json()
+        return v?.user?.id || 'guest'
+      }
+      function merge(a, b) {
+        if (
+          !Array.isArray(a) ||
+          !Array.isArray(b) ||
+          [...a, ...b].some((v) => !v || typeof v.id !== 'string')
+        )
+          throw Error()
+        const ids = new Set(a.map((v) => v.id))
+        const extra = b.filter((v) => !ids.has(v.id))
+        return { items: [...a, ...extra], added: extra.length }
+      }
+      if (location.origin === newOrigin) {
+        try {
+          scope = await identity()
+          sessionLabel = scope === 'guest' ? '访客资料' : '当前登录账户的资料'
+          message.textContent =
+            '此操作只在当前浏览器中复制' +
+            sessionLabel +
+            '。已登录用户请确认使用原账户。两个页面均需由你确认。'
+          action('打开旧站，读取本机资料', () => {
+            source = window.open(
+              oldOrigin + '/folio-move.html',
+              'folio-local-move',
+            )
+            if (!source) throw Error()
+          })
+          window.addEventListener('message', async (e) => {
+            if (
+              e.origin !== oldOrigin ||
+              !source ||
+              e.source !== source ||
+              e.data?.channel !== channel
+            )
+              return
+            if (e.data.step === 'ready') {
+              source.postMessage(
+                { channel, step: 'request', scope, sessionLabel },
+                oldOrigin,
+              )
+              return
+            }
+            if (e.data.step !== 'records' || e.data.scope !== scope) return
+            const payload = e.data
+            action('确认保存到新站', async () => {
+              if ((await identity()) !== scope) throw Error()
+              const [rk, ck] = keys(scope)
+              const oldRes = JSON.parse(payload.resumes || '[]'),
+                incoming = JSON.parse(payload.chats || '{"threads":[]}')
+              const resumes = merge(
+                JSON.parse(localStorage.getItem(rk) || '[]'),
+                oldRes,
+              )
+              const current = JSON.parse(
+                localStorage.getItem(ck) || '{"threads":[]}',
+              )
+              const chats = merge(current.threads, incoming.threads)
+              if (resumes.added)
+                localStorage.setItem(rk, JSON.stringify(resumes.items))
+              if (chats.added)
+                localStorage.setItem(
+                  ck,
+                  JSON.stringify({
+                    ...current,
+                    activeId: current.activeId ?? incoming.activeId,
+                    threads: chats.items,
+                  }),
+                )
+              button.hidden = true
+              message.textContent =
+                '已新增 ' +
+                resumes.added +
+                ' 份简历、' +
+                chats.added +
+                ' 个对话。同编号记录保留新站版本，旧站原件仍在本机。'
+              source.close()
+            })
+            message.textContent =
+              '已找到' + sessionLabel + '。确认后将合并到新站本机资料库。'
+          })
+        } catch {
+          fail()
+        }
+      } else if (location.origin === oldOrigin && window.opener) {
+        message.textContent = '正在连接新站。'
+        window.addEventListener('message', (e) => {
+          if (
+            e.origin !== newOrigin ||
+            e.source !== window.opener ||
+            e.data?.channel !== channel ||
+            e.data.step !== 'request' ||
+            typeof e.data.scope !== 'string'
+          )
+            return
+          const id = e.data.scope
+          message.textContent =
+            '将此浏览器中' +
+            (id === 'guest' ? '访客' : '同一 Folio 账户') +
+            '的简历与对话复制到 r.codeiy.com，原件保留。'
+          action('同意复制到 r.codeiy.com', () => {
+            const [r, c] = keys(id)
+            window.opener.postMessage(
+              {
+                channel,
+                step: 'records',
+                scope: id,
+                resumes: localStorage.getItem(r),
+                chats: localStorage.getItem(c),
+              },
+              newOrigin,
+            )
+            button.hidden = true
+            message.textContent = '请回到新站窗口确认保存。'
+          })
+        })
+        window.opener.postMessage({ channel, step: 'ready' }, newOrigin)
+      } else {
+        message.textContent = '请从新站开始迁移。'
+        action('前往新站', () =>
+          location.assign(newOrigin + '/folio-move.html'),
+        )
+      }
+    </script>
+  </body>
+</html>

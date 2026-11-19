@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 const title = '只有 Excel 活动复盘经历，怎么投数据分析岗？'
 const description =
   '用同一份虚构的运营简历，对照社群运营与数据分析两份 JD，逐条看哪些经历该提前、哪些可以照写，以及 SQL 经验如何核对。'
-const url = 'https://www.codeiy.com/guides/excel-to-data-analyst'
+const url = 'https://r.codeiy.com/guides/excel-to-data-analyst'
 
 export const Route = createFileRoute('/guides/excel-to-data-analyst')({
   component: Guide,
